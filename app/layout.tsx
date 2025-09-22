@@ -5,7 +5,7 @@ import Link from "next/link";
 export const metadata: Metadata = {
   title: "Questly",
   icons: {
-    icon: "/images.png",
+    icon: "/favicon.png",
   },
   description: "Генератор случайных приключений",
 };
