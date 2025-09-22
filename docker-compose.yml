@@ -1,0 +1,8 @@
+services:
+  questly:
+    build: .
+    container_name: questly
+    restart: always
+    ports:
+      - "80:80"
+      - "443:443"
