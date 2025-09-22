@@ -4,5 +4,4 @@ services:
     container_name: questly
     restart: always
     ports:
-      - "80:80"
-      - "443:443"
+      - "8080:3000"
