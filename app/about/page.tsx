@@ -8,7 +8,7 @@ export default function AboutPage() {
       <BackgroundBlobs />
 
       {/* Контент */}
-      <div className="relative z-10 max-w-3xl w-full text-center">
+      <div className="relative pt-32 md:pt-0 z-10 max-w-3xl w-full text-center">
         {/* Заголовок */}
         <h1 className="text-5xl md:text-6xl font-extrabold mb-12 bg-gradient-to-br from-[#FFCAD4] via-[#FF91A4] to-[#A3D5FF] bg-clip-text text-transparent drop-shadow-md">
           О проекте Questly
