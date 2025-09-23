@@ -46,7 +46,7 @@ const categoryMap: Record<string, string> = {
 
 export default function AdventureCard({ quest, onClose, isClosing }: Props) {
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm">
+    <div className="fixed inset-0 min-h-screen w-full z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm">
       <div
         className={`relative w-96 h-[420px] rounded-2xl shadow-2xl border-4 flex flex-col justify-between p-6 ${
           isClosing ? "animate-fadeZoomOut" : "animate-fadeZoom"

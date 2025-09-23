@@ -29,7 +29,7 @@ export default function RootLayout({
             </Link>
             <Link
               href="/about"
-              className="text-lg font-medium text-gray-600 hover:text-[#A3D5FF] transition-colors"
+              className="text-lg font-medium text-gray-600 hover:text-[#A3D5FF] transition-colors text-center"
             >
               О проекте
             </Link>

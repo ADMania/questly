@@ -30,7 +30,7 @@ export default function Home() {
   }
 
   return (
-    <main className="relative min-h-screen flex flex-col items-center justify-center bg-white text-gray-900 px-4 overflow-hidden">
+    <main className="relative min-h-screen pt-32 md:pt-0 flex flex-col items-center justify-center bg-white text-gray-900 px-4 overflow-hidden">
       {/* Фоновые пятна */}
       <BackgroundBlobs />
 
