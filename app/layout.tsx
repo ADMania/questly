@@ -8,7 +8,7 @@ export const metadata: Metadata = {
   description:
     "Questly — онлайн генератор случайных заданий и квестов. Креативные, ночные, дневные, социальные и домашние приключения для вдохновения и развлечений.",
   icons: {
-    icon: "/favicon.png",
+    icon: "/favicon.svg",
   },
 };
 
@@ -20,15 +20,12 @@ export default function RootLayout({
   return (
     <html lang="ru">
       <head>
-        {/* SEO meta */}
         <meta
           name="keywords"
-            content="
-        квесты, задания, челленджи, приключения, игра, развлечения, генератор квестов, генератор заданий, random quest, случайные задания, случайные квесты,
+          content="квесты, задания, челленджи, приключения, игра, развлечения, генератор квестов, генератор заданий, random quest, случайные задания, случайные квесты,
         идеи для квеста, задания для компании, задания для друзей, челленджи для друзей, игра на вечеринке, задания на вечеринку, квест дома, домашние задания, задания на улице,
         креативные задания, творческие задания, социальные челленджи, задания для двоих, задания для пары, челлендж для компании, испытания, задания с друзьями, задания для подростков, задания для взрослых,
-        приключения онлайн, задания онлайн, задания случайные, генератор случайных заданий, генератор челленджей, идеи для челленджей, весёлые задания, смешные задания, экстремальные задания, лайф-квесты, приключенческая игра
-        "
+        приключения онлайн, задания онлайн, задания случайные, генератор случайных заданий, генератор челленджей, идеи для челленджей, весёлые задания, смешные задания, экстремальные задания, лайф-квесты, приключенческая игра"
         />
         <meta name="robots" content="index, follow" />
         <link rel="canonical" href="https://questly.site/" />
@@ -59,7 +56,8 @@ export default function RootLayout({
           }}
         />
       </head>
-      <body className="bg-white text-gray-900">
+
+      <body className="bg-[#f2e3bf] text-[#3c2415] min-h-screen flex flex-col">
         <noscript>
           <div>
             <img
@@ -70,18 +68,23 @@ export default function RootLayout({
           </div>
         </noscript>
 
-        {/* Плавающий островок-хедер */}
-        <header className="absolute top-6 left-1/2 -translate-x-1/2 z-50">
-          <nav className="flex items-center gap-12 px-10 py-3 rounded-full bg-white/60 backdrop-blur-md shadow-md">
+        {/* Бумажный хедер */}
+        <header className="w-full flex justify-center mt-6 mb-10">
+          <nav
+            className="flex items-center gap-10 px-10 py-3 rounded-[16px]
+            border-2 border-[#d2a06f] bg-[#fff9eb]
+            shadow-[0_4px_0_#c99063,0_6px_8px_rgba(0,0,0,0.15)]
+            text-[#4a2c1f]"
+          >
             <Link
               href="/"
-              className="text-lg font-medium text-gray-600 hover:text-[#FF91A4] transition-colors"
+              className="text-lg font-medium hover:text-[#c57758] transition-colors"
             >
               Главная
             </Link>
             <Link
               href="/about"
-              className="text-lg font-medium text-gray-600 hover:text-[#A3D5FF] transition-colors text-center"
+              className="text-lg font-medium hover:text-[#c57758] transition-colors"
             >
               О проекте
             </Link>
@@ -89,7 +92,20 @@ export default function RootLayout({
         </header>
 
         {/* Контент */}
-        <main>{children}</main>
+        <main className="flex-grow">{children}</main>
+
+        {/* Маленький бумажный футер */}
+        <footer
+          className="text-center text-sm py-4 mt-10 text-[#5e4632] bg-[#fff9eb]/60 border-t border-[#d2a06f]/30"
+        >
+          Сделано <span className="font-semibold">Infera</span> ·{" "}
+          <a
+            href="mailto:infera-sys@yandex.ru"
+            className="underline-offset-2 hover:underline"
+          >
+            infera-sys@yandex.ru
+          </a>
+        </footer>
       </body>
     </html>
   );
