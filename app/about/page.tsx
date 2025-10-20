@@ -7,10 +7,12 @@ export default function SymbolsTestPage() {
   const [refreshKey, setRefreshKey] = useState(0);
 
   const demoQuest = {
-    quest: "Тут большое неудобное задание для того чтобы сломать вёрстку, а если сделать ещё больше текста? И ещё больше текста",
-    category: "Дневное приключение",
-    difficulty: "medium",
+    quest:
+      "Тут большое неудобное задание для того чтобы сломать вёрстку, а если сделать ещё больше текста? И ещё больше текста",
+    category: "day",
+    difficulty: "hard",
     symbol: `demo-${refreshKey}`,
+    symbolSeed: `demo-${refreshKey}`,
   };
 
   function regenerate() {
@@ -24,20 +26,16 @@ export default function SymbolsTestPage() {
       <button
         onClick={regenerate}
         className="mb-12 px-8 py-4 rounded-xl text-lg font-semibold border-2 border-[#d2a06f] bg-[#fff9eb]
-        text-[#4a2c1f] shadow-[0_4px_0_#c99063,0_6px_8px_rgба(0,0,0,0.15)]
-        hover:-translate-y-1 hover:shadow-[0_6px_0_#c99063,0_10px_14px_rgба(0,0,0,0.18)]
-        active:translate-y-[2px] active:shadow-[0_2px_0_#c99063,0_3px_6px_rgба(0,0,0,0.1)]
+        text-[#4a2c1f] shadow-[0_4px_0_#c99063,0_6px_8px_rgba(0,0,0,0.15)]
+        hover:-translate-y-1 hover:shadow-[0_6px_0_#c99063,0_10px_14px_rgba(0,0,0,0.18)]
+        active:translate-y-[2px] active:shadow-[0_2px_0_#c99063,0_3px_6px_rgba(0,0,0,0.1)]
         transition-all duration-200 ease-out"
       >
         🔄 Сгенерировать новую карточку
       </button>
 
       <div key={refreshKey} className="flex justify-center">
-        <AdventureCard
-          quest={demoQuest}
-          onClose={() => {}}
-          isClosing={false}
-        />
+        <AdventureCard quest={demoQuest} isClosing={false} />
       </div>
     </main>
   );

@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useRef } from "react";
-import AdventureCard from "@/components/AdventureCard";
+import AdventureCard from "@/components/cards/AdventureCard";
 import BackgroundGrid from "@/components/BackgroundGrid";
 
 type Quest = {
@@ -18,6 +18,20 @@ const categories = [
   { key: "social", label: "Социальные" },
   { key: "home", label: "Домашние" },
 ];
+
+const categoryLabels: Record<string, string> = {
+  day: "Дневные приключения",
+  night: "Ночные приключения",
+  creative: "Творческие приключения",
+  social: "Социальные приключения",
+  home: "Домашние приключения",
+};
+
+const difficultyToBadge: Record<string, "Л" | "С" | "Т"> = {
+  easy: "Л",
+  medium: "С",
+  hard: "Т",
+};
 
 export default function Home() {
   const [quest, setQuest] = useState<Quest | null>(null);
@@ -47,6 +61,14 @@ export default function Home() {
   function scrollToAbout() {
     aboutRef.current?.scrollIntoView({ behavior: "smooth" });
   }
+
+  const questForCard = quest
+    ? {
+        ...quest,
+        category: categoryLabels[quest.category] || quest.category,
+        difficulty: (difficultyToBadge[quest.difficulty] || "С") as "Л" | "С" | "Т",
+      }
+    : null;
 
   return (
     <main className="relative min-h-screen flex flex-col items-center text-[#3c2415] px-6 pb-20 overflow-hidden">
@@ -149,12 +171,22 @@ export default function Home() {
           </button>
         </div>
 
-        {quest && (
-          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/30 backdrop-blur-sm">
-            <AdventureCard quest={quest} onClose={closeCard} isClosing={isClosing} />
-          </div>
-        )}
       </div>
+
+      {questForCard && (
+        <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/30 backdrop-blur-sm">
+          <div className="relative">
+            <button
+              onClick={closeCard}
+              className="absolute -top-6 -right-6 text-3xl font-bold text-white drop-shadow-md hover:scale-110 transition"
+              aria-label="Закрыть карточку"
+            >
+              ×
+            </button>
+            <AdventureCard quest={questForCard} isClosing={isClosing} />
+          </div>
+        </div>
+      )}
 
       {/* ===== СЕКЦИЯ О ПРОЕКТЕ ===== */}
       <section
