@@ -7,9 +7,9 @@ export default function SymbolsTestPage() {
   const [refreshKey, setRefreshKey] = useState(0);
 
   const demoQuest = {
-    quest: "Поменяй привычный маршрут домой 🌿",
+    quest: "Тут большое неудобное задание для того чтобы сломать вёрстку, а если сделать ещё больше текста? И ещё больше текста",
     category: "Дневное приключение",
-    difficulty: "Л",
+    difficulty: "medium",
     symbol: `demo-${refreshKey}`,
   };
 

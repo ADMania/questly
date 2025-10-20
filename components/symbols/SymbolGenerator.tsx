@@ -6,6 +6,7 @@ import { generateSymbol } from "./drawSymbol";
 type SymbolGeneratorProps = {
   seed?: string | number;
   size?: number;
+  style?: React.CSSProperties;
 };
 
 /**
@@ -13,7 +14,11 @@ type SymbolGeneratorProps = {
  * — генерирует SVG-символ на основе переданного сида.
  * Если сид не задан, используется случайное значение (Date.now()).
  */
-export default function SymbolGenerator({ seed, size = 120 }: SymbolGeneratorProps) {
+export default function SymbolGenerator({
+  seed,
+  size = 120,
+  style,
+}: SymbolGeneratorProps) {
   const [finalSeed, setFinalSeed] = useState<number>(() => {
     if (typeof seed === "string") {
       // Преобразуем строковый сид в детерминированное число через простое хеширование
@@ -41,6 +46,7 @@ export default function SymbolGenerator({ seed, size = 120 }: SymbolGeneratorPro
       viewBox="0 0 100 100"
       xmlns="http://www.w3.org/2000/svg"
       className="opacity-95"
+      style={style}
     >
       <defs>
         <radialGradient id="fade" cx="50%" cy="50%" r="50%">

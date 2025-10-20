@@ -4,10 +4,13 @@ import { motion, AnimatePresence } from "framer-motion";
 import SymbolGenerator from "@/components/symbols/SymbolGenerator";
 import CardFrame from "@/components/cards/CardFrame";
 
+type DifficultyKey = "easy" | "medium" | "hard";
+type QuestDifficulty = DifficultyKey | "Л" | "С" | "Т";
+
 type Quest = {
   quest: string;
   category: string;
-  difficulty: "Л" | "С" | "Т";
+  difficulty: QuestDifficulty;
   symbol: string | number;
 };
 
@@ -16,17 +19,42 @@ interface AdventureCardProps {
   isClosing: boolean;
 }
 
-export default function AdventureCard({ quest, isClosing }: AdventureCardProps) {
-  const difficultyColors: Record<
-    Quest["difficulty"],
-    { main: string; stripe: string }
-  > = {
-    Л: { main: "#8ac58a", stripe: "#8ac58a" },
-    С: { main: "#e9854d", stripe: "#e9854d" },
-    Т: { main: "#d9534f", stripe: "#d9534f" },
-  };
+const difficultyPalette: Record<
+  DifficultyKey,
+  { main: string; stripe: string; border: string; stars: number }
+> = {
+  easy: { main: "#8ab58a", stripe: "#b7d1b7", border: "#9cbf9c", stars: 1 },
+  medium: { main: "#e59c5a", stripe: "#f1c79d", border: "#dfa56e", stars: 2 },
+  hard: { main: "#d06767", stripe: "#efb1b1", border: "#d67e7e", stars: 3 },
+};
 
-  const { main, stripe } = difficultyColors[quest.difficulty] ?? difficultyColors["С"];
+const difficultyAliases: Record<string, DifficultyKey> = {
+  easy: "easy",
+  medium: "medium",
+  hard: "hard",
+  Л: "easy",
+  С: "medium",
+  Т: "hard",
+};
+
+export default function AdventureCard({ quest, isClosing }: AdventureCardProps) {
+  const normalizedDifficulty =
+    difficultyAliases[quest.difficulty] ?? "medium";
+
+  const { main, stripe, border, stars } =
+    difficultyPalette[normalizedDifficulty];
+
+  const difficultyStars = "★".repeat(stars);
+
+  const difficultyLabel =
+    normalizedDifficulty === "easy"
+      ? "Лёгкое"
+      : normalizedDifficulty === "medium"
+      ? "Среднее"
+      : "Тяжёлое";
+
+  const categoryLabel = quest.category;
+  const difficultyTitle = `${difficultyLabel} приключение`;
 
   return (
     <AnimatePresence mode="wait">
@@ -37,46 +65,81 @@ export default function AdventureCard({ quest, isClosing }: AdventureCardProps) 
           animate={{ opacity: 1, y: 0, rotate: 0 }}
           exit={{ opacity: 0, y: 80, scale: 0.92 }}
           transition={{ duration: 0.45, ease: "easeOut" }}
-          className="relative"
+          className="relative w-[422px] h-[524px]"
         >
-          <CardFrame>
-            <div className="relative w-full h-full flex flex-col justify-between">
-              {/* Левая мягкая полоса */}
-              <div
-                className="absolute top-0 left-0 h-full rounded-l-[32px]"
-                style={{ width: "12px", backgroundColor: stripe }}
-              />
+          <div className="relative z-10 h-full w-full text-[#3c2415]">
+            <div
+              className="absolute rounded-[32px] bg-[#f4e8cf]"
+              style={{ top: 16, right: 16, bottom: 16, left: 16 }}
+            />
 
-              {/* Круг сложности */}
+            <div className="relative z-10 h-full w-full">
               <div
-                className="absolute top-5 left-[4px] w-[58px] h-[58px] rounded-full
-                flex items-center justify-center text-xl font-bold border-[3px]
-                bg-[#fffaf3] shadow-[0_2px_6px_rgba(0,0,0,0.1)]"
-                style={{ color: main, borderColor: main }}
+                className="absolute"
+                style={{ top: 58, right: 56, bottom: 64, left: 56 }}
               >
-                {quest.difficulty}
-              </div>
+                <div className="relative h-full w-full">
+                  {/* Левая полоса сложности */}
+                  <div
+                    className="absolute flex flex-col items-center justify-start rounded-l-[14px]"
+                    title={difficultyTitle}
+                    aria-label={difficultyTitle}
+                    style={{
+                      top: -32,
+                      bottom: -32,
+                      left: -22,
+                      width: "24px",
+                      backgroundColor: stripe,
+                      color: main,
+                      paddingTop: "32px",
+                      paddingBottom: "16px",
+                      gap: "6px",
+                    }}
+                  >
+                    {difficultyStars.split("").map((star, index) => (
+                      <span
+                        key={index}
+                        style={{
+                          fontSize: "20px",
+                          lineHeight: 1,
+                        }}
+                      >
+                        {star}
+                      </span>
+                    ))}
+                  </div>
 
-              {/* Символ */}
-              <div className="flex-1 flex items-center justify-center pt-6">
-                <SymbolGenerator size={360} seed={quest.symbol} />
-              </div>
+                  <div className="flex h-full flex-col px-2 pb-24">
+                    {/* Символ */}
+                    <div className="flex flex-1 items-center justify-center">
+                      <SymbolGenerator
+                        size={420}
+                        seed={quest.symbol}
+                        style={{ width: 420, maxWidth: "100%", height: "auto" }}
+                      />
+                    </div>
 
-              {/* Нижний блок */}
-              <div
-                className="relative z-[2] w-full px-5 py-5 border-t border-[#d2a06f]/40
-                bg-gradient-to-b from-[#fffaf3] to-[#fef3de] shadow-[inset_0_2px_4px_rgba(0,0,0,0.05)]
-                text-center rounded-b-[22px]"
-              >
-                <div className="text-sm font-semibold text-[#5e4632] mb-1">
-                  {quest.category}
+                    {/* Нижний блок */}
+                    <div
+                      className="px-2 pt-2 text-center"
+                      style={{
+                        borderTop: "1px solid rgba(210,160,111,0.35)",
+                      }}
+                    >
+                      <div className="mb-1 text-sm font-semibold text-[#5e4632] opacity-90">
+                        {categoryLabel}
+                      </div>
+                      <h3 className="text-[18px] font-bold text-[#3c2415] leading-snug tracking-tight">
+                        {quest.quest}
+                      </h3>
+                    </div>
+                  </div>
                 </div>
-                <h3 className="text-[18px] font-bold text-[#3c2415] leading-snug">
-                  {quest.quest}
-                </h3>
               </div>
             </div>
-          </CardFrame>
+          </div>
+
+          <CardFrame className="z-20" />
         </motion.div>
       )}
     </AnimatePresence>
