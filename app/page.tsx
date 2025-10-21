@@ -1,8 +1,8 @@
 "use client";
 
 import { useState, useRef } from "react";
-import AdventureCard from "@/components/cards/AdventureCard";
 import BackgroundGrid from "@/components/BackgroundGrid";
+import QuestModal from "@/components/QuestModal";
 
 type Quest = {
   quest: string;
@@ -174,18 +174,7 @@ export default function Home() {
       </div>
 
       {questForCard && (
-        <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/30 backdrop-blur-sm">
-          <div className="relative">
-            <button
-              onClick={closeCard}
-              className="absolute -top-6 -right-6 text-3xl font-bold text-white drop-shadow-md hover:scale-110 transition"
-              aria-label="Закрыть карточку"
-            >
-              ×
-            </button>
-            <AdventureCard quest={questForCard} isClosing={isClosing} />
-          </div>
-        </div>
+        <QuestModal quest={questForCard} isClosing={isClosing} onClose={closeCard} />
       )}
 
       {/* ===== СЕКЦИЯ О ПРОЕКТЕ ===== */}
