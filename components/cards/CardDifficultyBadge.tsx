@@ -20,17 +20,20 @@ const badgeAliases: Record<string, keyof typeof badgePalette> = {
   hard: "hard",
 };
 
-export default function CardDifficultyBadge({ difficulty }: CardDifficultyBadgeProps) {
+export default function CardDifficultyBadge({
+  difficulty,
+}: CardDifficultyBadgeProps) {
   const normalized = badgeAliases[difficulty] ?? "easy";
   const { gradient, label, stars } = badgePalette[normalized];
   const starDisplay = "★".repeat(stars);
 
   return (
     <div
+      role="img"
+      aria-label={label}
       className={`relative px-3 py-1 rounded-md text-sm font-semibold text-[#3c2415]
       border border-[#d2a06f] shadow-[0_2px_0_#c99063] bg-gradient-to-b ${gradient}`}
       title={label}
-      aria-label={label}
     >
       {starDisplay}
       {/* Лёгкий бликовый слой */}

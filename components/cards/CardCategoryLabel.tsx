@@ -4,16 +4,16 @@ interface CardCategoryLabelProps {
   category: string;
 }
 
-export default function CardCategoryLabel({ category }: CardCategoryLabelProps) {
+export default function CardCategoryLabel({
+  category,
+}: CardCategoryLabelProps) {
   return (
     <div
       className="relative px-4 py-1 rounded-full border border-[#d2a06f]
       bg-[#fffaf3] text-[#4a2c1f] text-sm font-medium tracking-wide shadow-[0_2px_0_#c99063]
       select-none"
     >
-      <span className="relative z-10 capitalize">
-        {category}
-      </span>
+      <span className="relative z-10 capitalize">{category}</span>
 
       {/* Мягкий блик сверху */}
       <div

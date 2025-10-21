@@ -41,10 +41,10 @@ export default function AdventureCard({ quest, isClosing }: AdventureCardProps) 
   const normalizedDifficulty =
     difficultyAliases[quest.difficulty] ?? "medium";
 
-  const { main, stripe, border, stars } =
+  const { main, stripe, stars } =
     difficultyPalette[normalizedDifficulty];
 
-  const difficultyStars = "★".repeat(stars);
+  const difficultyPositions = Array.from({ length: stars }, (_, idx) => idx + 1);
 
   const difficultyLabel =
     normalizedDifficulty === "easy"
@@ -96,15 +96,15 @@ export default function AdventureCard({ quest, isClosing }: AdventureCardProps) 
                       gap: "6px",
                     }}
                   >
-                    {difficultyStars.split("").map((star, index) => (
+                    {difficultyPositions.map((position) => (
                       <span
-                        key={index}
+                        key={`star-${position}`}
                         style={{
                           fontSize: "20px",
                           lineHeight: 1,
                         }}
                       >
-                        {star}
+                        ★
                       </span>
                     ))}
                   </div>
@@ -121,7 +121,7 @@ export default function AdventureCard({ quest, isClosing }: AdventureCardProps) 
 
                     {/* Нижний блок */}
                     <div
-                      className="px-2 pt-2 text-center"
+                      className="pt-2 text-center"
                       style={{
                         borderTop: "1px solid rgba(210,160,111,0.35)",
                       }}
