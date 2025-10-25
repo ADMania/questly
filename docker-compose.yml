@@ -1,7 +1,0 @@
-services:
-  questly:
-    build: .
-    container_name: questly
-    restart: always
-    ports:
-      - "3000:3000"
