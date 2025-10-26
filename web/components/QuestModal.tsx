@@ -6,7 +6,7 @@ type QuestPayload = {
   quest: string;
   category: string;
   difficulty: "Л" | "С" | "Т";
-  symbol: string | number;
+  symbolSeed: string;
 };
 
 interface QuestModalProps {

@@ -8,7 +8,9 @@ type Quest = {
   quest: string;
   category: string;
   difficulty: string;
-  symbol: string;
+  templateId?: string;
+  fragments?: string[];
+  symbolSeed: string;
 };
 
 const categories = [
@@ -41,11 +43,24 @@ export default function Home() {
   const aboutRef = useRef<HTMLDivElement | null>(null);
 
   async function getQuest(category?: string) {
-    const query = category ? `?category=${category}` : "";
-    const res = await fetch(`/api/generate${query}`);
-    const data = await res.json();
-    setQuest(data);
-    setIsClosing(false);
+    try {
+      const params = new URLSearchParams();
+      if (category) params.set("category", category);
+      const url = `/cms/api/quests/generate${params.size ? `?${params.toString()}` : ""}`;
+
+      const res = await fetch(url, { cache: "no-store" });
+      if (!res.ok) {
+        throw new Error("Failed to fetch quest");
+      }
+
+      const data: Quest = await res.json();
+      setQuest(data);
+      setIsClosing(false);
+    } catch (error) {
+      console.error("Failed to load quest", error);
+      setQuest(null);
+      setIsClosing(false);
+    }
   }
 
   function closeCard() {

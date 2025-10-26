@@ -11,7 +11,7 @@ type Quest = {
   quest: string;
   category: string;
   difficulty: QuestDifficulty;
-  symbol: string | number;
+  symbolSeed: string;
 };
 
 interface AdventureCardProps {
@@ -60,7 +60,7 @@ export default function AdventureCard({ quest, isClosing }: AdventureCardProps) 
     <AnimatePresence mode="wait">
       {!isClosing && (
         <motion.div
-          key={quest.symbol}
+          key={quest.symbolSeed}
           initial={{ opacity: 0, y: 40, rotate: -2 }}
           animate={{ opacity: 1, y: 0, rotate: 0 }}
           exit={{ opacity: 0, y: 80, scale: 0.92 }}
@@ -114,7 +114,7 @@ export default function AdventureCard({ quest, isClosing }: AdventureCardProps) 
                     <div className="flex flex-1 items-center justify-center">
                       <SymbolGenerator
                         size={420}
-                        seed={quest.symbol}
+                        seed={quest.symbolSeed}
                         style={{ width: 420, maxWidth: "100%", height: "auto" }}
                       />
                     </div>
