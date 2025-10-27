@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { FormEvent, useState, ChangeEvent } from "react";
+import { useRouter } from "next/navigation";
 import BackgroundGrid from "@/components/BackgroundGrid";
 
 type MessageState = {
@@ -18,6 +19,7 @@ const inputClasses =
   "w-full rounded-xl border-2 border-[#d2a06f] bg-white/90 px-4 py-3 text-base shadow-[0_3px_0_#c99063] outline-none transition focus:-translate-y-0.5 focus:shadow-[0_5px_0_#c99063] placeholder:text-[#9b7b5c]";
 
 export default function LoginPage() {
+  const router = useRouter();
   const [form, setForm] = useState(initialForm);
   const [isLoading, setIsLoading] = useState(false);
   const [message, setMessage] = useState<MessageState | null>(null);
@@ -29,7 +31,7 @@ export default function LoginPage() {
     }
   };
 
-  const handleSubmit = (event: FormEvent<HTMLFormElement>) => {
+  const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
 
     if (isLoading) return;
@@ -40,18 +42,44 @@ export default function LoginPage() {
     }
 
     setIsLoading(true);
-    // Заглушка отправки запроса — замените реальным вызовом API при интеграции.
-    setTimeout(() => {
+    setMessage(null);
+
+    try {
+      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL || "http://localhost:1337"}/api/auth/local`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          identifier: form.email,
+          password: form.password,
+        }),
+      });
+
+      const data = await res.json();
+
+      if (!res.ok) {
+        const errorMsg = data?.error?.message || "Не удалось войти. Повторите попытку.";
+        throw new Error(errorMsg);
+      }
+
+      localStorage.setItem("jwt", data.jwt);
+      localStorage.setItem("user", JSON.stringify(data.user));
+      window.dispatchEvent(new Event("questly-auth-change"));
+
       setMessage({
         type: "success",
-        text: "Демо: вход выполнен. Скоро перенаправим в личный кабинет.",
+        text: `С возвращением, ${data.user.username}!`,
       });
+
+      router.push("/profile");
+    } catch (err: any) {
+      setMessage({ type: "error", text: err.message });
+    } finally {
       setIsLoading(false);
-    }, 600);
+    }
   };
 
   return (
-    <main className="relative min-h-screen flex items-center justify-center px-6 py-16 text-[#3c2415]">
+    <main className="relative min-h-screen flex items-center justify-center px-6 py-12 text-[#3c2415]">
       <BackgroundGrid />
 
       <section className="relative z-10 w-full max-w-6xl">

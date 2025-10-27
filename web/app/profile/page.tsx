@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import BackgroundGrid from "@/components/BackgroundGrid";
 
@@ -32,6 +32,18 @@ export default function ProfilePage() {
   const [loading, setLoading] = useState(true);
 
   const api = process.env.NEXT_PUBLIC_STRAPI_URL || "http://localhost:1337";
+
+  const handleLogout = useCallback(() => {
+    try {
+      localStorage.removeItem("jwt");
+      localStorage.removeItem("user");
+    } catch {
+      // ignore storage errors
+    }
+
+    window.dispatchEvent(new Event("questly-auth-change"));
+    router.push("/");
+  }, [router]);
 
   // 🔹 Получаем данные пользователя и связанные коллекции
   useEffect(() => {
@@ -77,56 +89,81 @@ export default function ProfilePage() {
 
   if (loading)
     return (
-      <main className="min-h-screen flex items-center justify-center text-[#3c2415]">
-        <p>Загрузка профиля...</p>
+      <main className="relative min-h-screen flex items-center justify-center text-[#3c2415] px-6 pb-10 overflow-hidden">
+        <BackgroundGrid />
+        <div className="relative z-10 w-full max-w-md text-center">
+          <div className="rounded-2xl border-2 border-[#d2a06f] bg-[#fff9eb] shadow-[0_4px_0_#c99063,0_10px_18px_rgba(0,0,0,0.2)] px-6 py-8">
+            <p className="text-lg font-semibold">Загрузка профиля...</p>
+            <p className="mt-2 text-sm text-[#5e4632]/80">
+              Собираем ваши приключения. Это займет всего пару секунд.
+            </p>
+          </div>
+        </div>
       </main>
     );
 
   if (!user)
     return (
-      <main className="min-h-screen flex items-center justify-center text-[#3c2415]">
-        <p>Ошибка загрузки данных.</p>
+      <main className="relative min-h-screen flex items-center justify-center text-[#3c2415] px-6 pb-10 overflow-hidden">
+        <BackgroundGrid />
+        <div className="relative z-10 w-full max-w-md text-center">
+          <div className="rounded-2xl border-2 border-[#e28b82] bg-[#fde7e5] shadow-[0_4px_0_#d16a62,0_10px_18px_rgba(0,0,0,0.18)] px-6 py-8">
+            <p className="text-lg font-semibold text-[#b73d3d]">Ошибка загрузки данных.</p>
+            <p className="mt-2 text-sm text-[#8a2f2f]/80">
+              Не удалось получить профиль. Попробуйте обновить страницу или войти повторно.
+            </p>
+          </div>
+        </div>
       </main>
     );
 
   return (
-    <main className="relative min-h-screen flex flex-col items-center text-[#3c2415] px-6 pb-20 overflow-hidden">
+    <main className="relative min-h-screen flex flex-col items-center text-[#3c2415] px-6 pb-10 overflow-hidden">
       <BackgroundGrid />
 
-      <section className="relative z-10 w-full max-w-5xl pt-24 md:pt-28">
+      <section className="relative z-10 w-full max-w-5xl pt-8 md:pt-12">
         {/* 🧠 Шапка профиля */}
-        <header className="rounded-2xl border-2 border-[#d2a06f] bg-[#fff9eb] shadow-[0_4px_0_#c99063,0_6px_8px_rgba(0,0,0,0.15)] p-6 md:p-8 mb-8">
-          <div className="flex items-center gap-5 md:gap-6">
-            <div className="w-20 h-20 md:w-24 md:h-24 rounded-full bg-[#f2e3bf] border-2 border-[#d2a06f] overflow-hidden">
-              {user.avatar?.url && (
-                <img
-                  src={`${api}${user.avatar.url}`}
-                  alt="avatar"
-                  className="w-full h-full object-cover"
-                />
-              )}
-            </div>
-            <div className="flex-1 min-w-0">
-              <h1
-                className="text-3xl md:text-4xl font-extrabold truncate"
-                style={{ color: "#d26d75", textShadow: "0 2px 3px rgba(0,0,0,0.15)" }}
-              >
-                {user.username}
-              </h1>
-              <p className="text-[#5e4632] mt-1">
-                Опыт: {user.experience || 0}
-              </p>
-              <div className="mt-4 grid grid-cols-3 gap-3 max-w-md text-center">
-                <div className="rounded-xl border-2 border-[#d2a06f] bg-white/80 py-2 shadow-[0_2px_0_#c99063]">
-                  <div className="text-xl font-bold">{cards.length}</div>
-                  <div className="text-xs text-[#5e4632]">квестов</div>
-                </div>
-                <div className="rounded-xl border-2 border-[#d2a06f] bg-white/80 py-2 shadow-[0_2px_0_#c99063]">
-                  <div className="text-xl font-bold">{posts.length}</div>
-                  <div className="text-xs text-[#5e4632]">постов</div>
+        <header className="rounded-2xl border-2 border-[#d2a06f] bg-[#fff9eb] shadow-[0_4px_0_#c99063,0_6px_8px_rgba(0,0,0,0.15)] p-6 md:p-8 mb-4">
+          <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
+            <div className="flex items-center gap-5 md:gap-6">
+              <div className="w-20 h-20 md:w-32 md:h-32 rounded-full bg-[#f2e3bf] border-2 border-[#d2a06f] overflow-hidden">
+                {user.avatar?.url && (
+                  <img
+                    src={`${api}${user.avatar.url}`}
+                    alt="avatar"
+                    className="w-full h-full object-cover"
+                  />
+                )}
+              </div>
+              <div className="flex-1 min-w-0">
+                <h1
+                  className="text-3xl md:text-4xl font-extrabold truncate"
+                  style={{ color: "#d26d75", textShadow: "0 2px 3px rgba(0,0,0,0.15)" }}
+                >
+                  {user.username}
+                </h1>
+                <p className="text-[#5e4632] mt-1">
+                  Опыт: {user.experience || 0}
+                </p>
+                <div className="mt-4 grid grid-cols-3 gap-3 max-w-md text-center">
+                  <div className="rounded-xl border-2 border-[#d2a06f] bg-white/80 py-2 shadow-[0_2px_0_#c99063]">
+                    <div className="text-xl font-bold">{cards.length}</div>
+                    <div className="text-xs text-[#5e4632]">квестов</div>
+                  </div>
+                  <div className="rounded-xl border-2 border-[#d2a06f] bg-white/80 py-2 shadow-[0_2px_0_#c99063]">
+                    <div className="text-xl font-bold">{posts.length}</div>
+                    <div className="text-xs text-[#5e4632]">постов</div>
+                  </div>
                 </div>
               </div>
             </div>
+            <button
+              type="button"
+              onClick={handleLogout}
+              className="px-4 py-2 rounded-xl border-2 border-[#d2a06f] bg-[#d26d75] text-[#fff9eb] text-sm font-semibold shadow-[0_3px_0_#a9565d] transition hover:-translate-y-0.5 hover:shadow-[0_5px_0_#a9565d]"
+            >
+              Выйти
+            </button>
           </div>
         </header>
 
@@ -159,9 +196,9 @@ export default function ProfilePage() {
                 </div>
               ))
             ) : (
-              <p className="text-center justify-self-center text-[#5e4632]/70">
-                У вас пока нет карточек. Получите первую, чтобы начать приключение!
-              </p>
+              <div className="col-span-full flex flex-col items-center justify-center py-12 text-center text-[#5e4632]/70 min-h-[220px]">
+                <p>У вас пока нет карточек. Получите первую, чтобы начать приключение!</p>
+              </div>
             )}
           </div>
         )}
@@ -179,9 +216,9 @@ export default function ProfilePage() {
                 </div>
               ))
             ) : (
-              <p className="text-center text-[#5e4632]/70">
-                Пока нет активности. Поделитесь приключением, чтобы оживить ленту!
-              </p>
+              <div className="flex flex-col items-center justify-center py-12 text-center text-[#5e4632]/70 min-h-[220px]">
+                <p>Пока нет активности. Поделитесь приключением, чтобы оживить ленту!</p>
+              </div>
             )}
           </div>
         )}

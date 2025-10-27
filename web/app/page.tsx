@@ -110,7 +110,7 @@ export default function Home() {
       `}</style>
 
       {/* ===== HERO + ГЕНЕРАТОР ===== */}
-      <div className="pt-32 md:pt-40 w-full flex flex-col items-center gap-14 relative z-10 max-w-6xl">
+      <div className="pt-20 md:pt-28 w-full flex flex-col items-center gap-14 relative z-10 max-w-6xl">
         <header className="text-center space-y-4">
           <h1
             className="text-6xl md:text-7xl font-extrabold leading-tight tracking-tight"

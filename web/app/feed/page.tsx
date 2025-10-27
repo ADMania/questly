@@ -16,11 +16,11 @@ export default function FeedPage() {
   const [active, setActive] = useState<string>("all");
 
   return (
-    <main className="relative min-h-screen flex flex-col items-center text-[#3c2415] px-6 pb-20 overflow-hidden">
+    <main className="relative min-h-screen flex flex-col items-center text-[#3c2415] px-6 pb-16 overflow-hidden">
       <BackgroundGrid />
 
-      <section className="relative z-10 w-full max-w-5xl pt-24 md:pt-28">
-        <header className="mb-8">
+      <section className="relative z-10 w-full max-w-5xl pt-8 md:pt-12">
+        <header className="mb-6">
           <h1
             className="text-4xl md:text-5xl font-extrabold"
             style={{ color: "#d26d75", textShadow: "0 2px 3px rgba(0,0,0,0.15)" }}
@@ -89,4 +89,3 @@ export default function FeedPage() {
     </main>
   );
 }
-

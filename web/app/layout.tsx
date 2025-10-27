@@ -1,7 +1,7 @@
 import "../styles/globals.css";
 import type { Metadata } from "next";
-import Link from "next/link";
 import Script from "next/script";
+import AppHeader from "@/components/AppHeader";
 
 export const metadata: Metadata = {
   title: "Questly — Генератор приключений",
@@ -69,33 +69,7 @@ export default function RootLayout({
         </noscript>
 
         {/* Бумажный хедер */}
-        <header className="w-full flex justify-center mt-6 mb-10">
-          <nav
-            className="flex items-center gap-10 px-10 py-3 rounded-[16px]
-            border-2 border-[#d2a06f] bg-[#fff9eb]
-            shadow-[0_4px_0_#c99063,0_6px_8px_rgba(0,0,0,0.15)]
-            text-[#4a2c1f]"
-          >
-            <Link
-              href="/"
-              className="text-lg font-medium hover:text-[#c57758] transition-colors"
-            >
-              Главная
-            </Link>
-            <Link
-              href="/feed"
-              className="text-lg font-medium hover:text-[#c57758] transition-colors"
-            >
-              Лента
-            </Link>
-            <Link
-              href="/profile"
-              className="text-lg font-medium hover:text-[#c57758] transition-colors"
-            >
-              Профиль
-            </Link>
-          </nav>
-        </header>
+        <AppHeader />
 
         {/* Контент */}
         <main className="flex-grow">{children}</main>

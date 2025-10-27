@@ -72,6 +72,7 @@ export default function RegisterPage() {
       // Сохраняем токен, если нужно
       localStorage.setItem("jwt", data.jwt);
       localStorage.setItem("user", JSON.stringify(data.user));
+      window.dispatchEvent(new Event("questly-auth-change"));
 
       setMessage({ type: "success", text: `Добро пожаловать, ${data.user.username}!` });
 
@@ -86,7 +87,7 @@ export default function RegisterPage() {
 
 
   return (
-    <main className="relative min-h-screen flex items-center justify-center px-6 py-16 text-[#3c2415]">
+    <main className="relative min-h-screen flex items-center justify-center px-6 py-12 text-[#3c2415]">
       <BackgroundGrid />
 
       <section className="relative z-10 w-full max-w-6xl">
