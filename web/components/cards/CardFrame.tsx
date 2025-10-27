@@ -17,7 +17,7 @@ export default function CardFrame({ className }: CardFrameProps) {
         alt=""
         fill
         priority
-        sizes="422px"
+        sizes="(max-width: 520px) 90vw, 422px"
         className="object-contain"
         draggable={false}
       />

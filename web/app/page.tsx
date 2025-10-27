@@ -3,6 +3,7 @@
 import { useState, useRef } from "react";
 import BackgroundGrid from "@/components/BackgroundGrid";
 import QuestModal from "@/components/QuestModal";
+import AuthRequiredModal from "@/components/modals/AuthRequiredModal";
 
 type Quest = {
   quest: string;
@@ -40,10 +41,15 @@ export default function Home() {
   const [isClosing, setIsClosing] = useState(false);
   const [activeCat, setActiveCat] = useState<string | null>(null);
   const [section, setSection] = useState<"about" | "updates">("about");
+  const [isSavingCard, setIsSavingCard] = useState(false);
+  const [cardActionError, setCardActionError] = useState<string | null>(null);
+  const [showAuthPrompt, setShowAuthPrompt] = useState(false);
   const aboutRef = useRef<HTMLDivElement | null>(null);
 
   async function getQuest(category?: string) {
     try {
+      setCardActionError(null);
+      setShowAuthPrompt(false);
       const params = new URLSearchParams();
       if (category) params.set("category", category);
       const url = `/cms/api/quests/generate${params.size ? `?${params.toString()}` : ""}`;
@@ -65,7 +71,13 @@ export default function Home() {
 
   function closeCard() {
     setIsClosing(true);
-    setTimeout(() => setQuest(null), 300);
+    setShowAuthPrompt(false);
+    setTimeout(() => {
+      setQuest(null);
+      setIsClosing(false);
+      setCardActionError(null);
+      setIsSavingCard(false);
+    }, 300);
   }
 
   function handleCategory(cat: string) {
@@ -84,6 +96,57 @@ export default function Home() {
         difficulty: (difficultyToBadge[quest.difficulty] || "С") as "Л" | "С" | "Т",
       }
     : null;
+
+  const badgeToDifficulty: Record<"Л" | "С" | "Т", "easy" | "medium" | "hard"> = {
+    Л: "easy",
+    С: "medium",
+    Т: "hard",
+  };
+
+  const handleTakeCard = async () => {
+    if (!questForCard || isSavingCard) return;
+
+    const jwt = typeof window !== "undefined" ? localStorage.getItem("jwt") : null;
+    const userRaw = typeof window !== "undefined" ? localStorage.getItem("user") : null;
+
+    if (!jwt || !userRaw) {
+      setShowAuthPrompt(true);
+      return;
+    }
+
+    const difficulty = badgeToDifficulty[questForCard.difficulty] ?? "medium";
+
+    setIsSavingCard(true);
+    setCardActionError(null);
+
+    try {
+      const res = await fetch("/cms/api/cards/add", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${jwt}`,
+        },
+        body: JSON.stringify({
+          quest_text: questForCard.quest,
+          difficulty,
+          symbol_seed: questForCard.symbolSeed,
+          category: quest?.category ?? null,
+        }),
+      });
+
+      const payload = await res.json();
+
+      if (!res.ok) {
+        const errorMsg = payload?.error?.message || "Не удалось сохранить карточку. Попробуйте снова.";
+        throw new Error(errorMsg);
+      }
+
+      closeCard();
+    } catch (error: any) {
+      setCardActionError(error.message || "Произошла ошибка. Попробуйте снова.");
+      setIsSavingCard(false);
+    }
+  };
 
   return (
     <main className="relative min-h-screen flex flex-col items-center text-[#3c2415] px-6 pb-20 overflow-hidden">
@@ -189,8 +252,18 @@ export default function Home() {
       </div>
 
       {questForCard && (
-        <QuestModal quest={questForCard} isClosing={isClosing} onClose={closeCard} />
+        <QuestModal
+          quest={questForCard}
+          isClosing={isClosing}
+          onClose={closeCard}
+          onTake={handleTakeCard}
+          onDecline={closeCard}
+          isProcessing={isSavingCard}
+          actionError={cardActionError}
+        />
       )}
+
+      {showAuthPrompt && <AuthRequiredModal onClose={() => setShowAuthPrompt(false)} />}
 
       {/* ===== СЕКЦИЯ О ПРОЕКТЕ ===== */}
       <section
