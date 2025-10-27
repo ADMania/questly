@@ -23,6 +23,12 @@
       "relation": "manyToMany",
       "target": "api::fragment.fragment",
       "inversedBy": "categories"
+    },
+    "cards": {
+      "type": "relation",
+      "relation": "manyToMany",
+      "target": "api::card.card",
+      "mappedBy": "categories"
     }
   }
 }
