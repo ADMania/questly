@@ -4,6 +4,7 @@ import { useCallback, useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import BackgroundGrid from "@/components/BackgroundGrid";
 import AdventureCard from "@/components/cards/AdventureCard";
+import { getCategoryLabel, getCategoryLabelOrFallback } from "@/lib/categories";
 
 const tabs: { key: "quests" | "activity"; label: string }[] = [
   { key: "quests", label: "Квесты" },
@@ -60,60 +61,88 @@ export default function ProfilePage() {
     }
 
     const fetchData = async () => {
+      setCardsError(null);
+      setPostsError(null);
+
       try {
-        // 1. Получаем пользователя
-        const userRes = await fetch(`${api}/api/users/me?populate[avatar]=*`, {
+        const meRes = await fetch(`${api}/api/me`, {
           headers: { Authorization: `Bearer ${jwt}` },
         });
-        if (!userRes.ok) throw new Error("Ошибка авторизации");
-        const userData = await userRes.json();
-        setUser(userData);
 
-        setCardsError(null);
-        setPostsError(null);
+        if (meRes.status === 401) {
+          setUser(null);
+          setCards([]);
+          setPosts([]);
+          router.push("/login");
+          return;
+        }
 
-        // 2. Получаем карточки пользователя
-        const cardsRes = await fetch(`${api}/api/cards/mine`, {
-          headers: { Authorization: `Bearer ${jwt}` },
-        });
-        let normalizedCards: Card[] = [];
-        if (cardsRes.ok) {
-          const cardsData = await cardsRes.json();
-          normalizedCards =
-            (Array.isArray(cardsData?.data) ? cardsData.data : []).map((entry: any) => {
-              const attrs = entry?.attributes ?? {};
-              const categoriesData = Array.isArray(attrs?.categories?.data) ? attrs.categories.data : [];
-              const categoryNames = categoriesData
-                .map((item: any) => item?.attributes?.name || item?.attributes?.slug)
+        if (!meRes.ok) {
+          throw new Error("PROFILE_FETCH_FAILED");
+        }
+
+        const profileData = await meRes.json();
+        setUser(profileData);
+
+        const normalizedCards: Card[] = Array.isArray(profileData?.cards)
+          ? profileData.cards.map((card: any) => {
+              const categoriesList = Array.isArray(card?.categories) ? card.categories : [];
+              const categoryTitles = categoriesList
+                .map((item: any) => {
+                  if (!item) return null;
+                  const rawValue =
+                    typeof item === "string"
+                      ? item
+                      : item.title ?? item.name ?? item.slug ?? null;
+                  if (typeof rawValue !== "string" || rawValue.trim().length === 0) {
+                    return null;
+                  }
+                  const label = getCategoryLabel(rawValue);
+                  const readable = label || rawValue;
+                  return readable.trim().length > 0 ? readable : null;
+                })
                 .filter((value: unknown): value is string => typeof value === "string" && value.length > 0);
 
-              const difficultyValue = (attrs?.difficulty as string) ?? "medium";
+              const difficultyValue = typeof card?.difficulty === "string" ? card.difficulty : "medium";
               const normalizedDifficulty: Card["difficulty"] =
                 ["easy", "medium", "hard"].includes(difficultyValue)
                   ? (difficultyValue as Card["difficulty"])
                   : "medium";
 
+              const questText =
+                typeof card?.quest_text === "string" && card.quest_text.trim().length > 0
+                  ? card.quest_text
+                  : "Без описания";
+
+              const symbolSeed =
+                typeof card?.symbol_seed === "string" && card.symbol_seed.length > 0
+                  ? card.symbol_seed
+                  : String(card?.id ?? Date.now());
+
               return {
-                id: entry?.id ?? attrs?.id ?? generateClientId(),
-                quest_text: attrs?.quest_text ?? "Без описания",
+                id: card?.id ?? generateClientId(),
+                quest_text: questText,
                 difficulty: normalizedDifficulty,
-                symbol_seed: attrs?.symbol_seed ?? String(entry?.id ?? Date.now()),
-                primaryCategory: categoryNames[0] ?? "Личное приключение",
-                categories: categoryNames,
+                symbol_seed: symbolSeed,
+                primaryCategory: categoryTitles[0] ?? getCategoryLabelOrFallback(undefined, "Личное приключение"),
+                categories: categoryTitles,
               };
-            });
-        } else if (cardsRes.status === 401) {
-          router.push("/login");
-          return;
-        } else {
-          setCardsError("Не удалось загрузить карточки.");
-        }
+            })
+          : [];
+
         setCards(normalizedCards);
 
-        // 3. Получаем посты пользователя
+        // Получаем посты пользователя
         const postParams = new URLSearchParams();
-        postParams.append('filters[author][id][$eq]', String(userData.id));
-        postParams.append('sort', 'createdAt:desc');
+        if (profileData?.id) {
+          postParams.append("filters[author][id][$eq]", String(profileData.id));
+        }
+        postParams.append("sort", "createdAt:desc");
+
+        if (!postParams.has("filters[author][id][$eq]")) {
+          setPosts([]);
+          return;
+        }
 
         const postsRes = await fetch(`${api}/api/posts?${postParams.toString()}`, {
           headers: { Authorization: `Bearer ${jwt}` },
@@ -131,6 +160,7 @@ export default function ProfilePage() {
               };
             });
         } else if (postsRes.status === 401) {
+          setPosts([]);
           router.push("/login");
           return;
         } else {
@@ -139,8 +169,13 @@ export default function ProfilePage() {
         setPosts(normalizedPosts);
       } catch (err) {
         console.error(err);
-        if (err instanceof Error && err.message === "Ошибка авторизации") {
-          router.push("/login");
+        setUser(null);
+        setCards([]);
+        setPosts([]);
+
+        if (err instanceof Error && err.message === "PROFILE_FETCH_FAILED") {
+          setCardsError("Не удалось загрузить профиль.");
+          setPostsError("Не удалось загрузить активность.");
         } else {
           setCardsError((prev) => prev ?? "Не удалось загрузить карточки.");
           setPostsError((prev) => prev ?? "Не удалось загрузить активность.");

@@ -80,20 +80,21 @@ export default factories.createCoreController('api::card.card', ({ strapi }) => 
       return ctx.unauthorized("Необходима авторизация");
     }
 
-    try {
-      const cards = await strapi.entityService.findMany('api::card.card', {
-        filters: {
-          owner: user.id,
+    ctx.query = {
+      filters: {
+        owner: {
+          id: user.id,
         },
-        populate: ['categories', 'owner'],
-        sort: { createdAt: 'desc' },
-      });
+      },
+      populate: {
+        categories: {
+          fields: ['name', 'slug'],
+        },
+      },
+      sort: ['createdAt:desc'],
+      pagination: ctx.query?.pagination,
+    };
 
-      const sanitized = await this.sanitizeOutput(cards, ctx);
-      return this.transformResponse(sanitized);
-    } catch (error) {
-      strapi.log.error("Failed to load user cards:", error);
-      return ctx.internalServerError("Не удалось загрузить карточки.");
-    }
+    return super.find(ctx);
   },
 }));

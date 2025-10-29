@@ -4,6 +4,7 @@ import { useState, useRef } from "react";
 import BackgroundGrid from "@/components/BackgroundGrid";
 import QuestModal from "@/components/QuestModal";
 import AuthRequiredModal from "@/components/modals/AuthRequiredModal";
+import { getCategoryLabel } from "@/lib/categories";
 
 type Quest = {
   quest: string;
@@ -21,14 +22,6 @@ const categories = [
   { key: "social", label: "Социальные" },
   { key: "home", label: "Домашние" },
 ];
-
-const categoryLabels: Record<string, string> = {
-  day: "Дневные приключения",
-  night: "Ночные приключения",
-  creative: "Творческие приключения",
-  social: "Социальные приключения",
-  home: "Домашние приключения",
-};
 
 const difficultyToBadge: Record<string, "Л" | "С" | "Т"> = {
   easy: "Л",
@@ -92,7 +85,7 @@ export default function Home() {
   const questForCard = quest
     ? {
         ...quest,
-        category: categoryLabels[quest.category] || quest.category,
+        category: getCategoryLabel(quest.category) || quest.category,
         difficulty: (difficultyToBadge[quest.difficulty] || "С") as "Л" | "С" | "Т",
       }
     : null;
