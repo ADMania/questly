@@ -1,20 +1,18 @@
-/**
- * card controller
- */
-
 import { factories } from '@strapi/strapi';
 
 const ALLOWED_DIFFICULTIES = ["easy", "medium", "hard"];
 
 export default factories.createCoreController('api::card.card', ({ strapi }) => ({
-  async addCard(ctx) {
+  async create(ctx) {
     const user = ctx.state.user;
 
     if (!user) {
       return ctx.unauthorized("Необходима авторизация");
     }
 
-    const { quest_text, difficulty, symbol_seed, category } = ctx.request.body ?? {};
+    const payload = ctx.request.body?.data ?? ctx.request.body ?? {};
+    const { quest_text, difficulty, symbol_seed } = payload;
+    const categoriesInput = payload.categories ?? payload.category ?? null;
 
     if (!quest_text || !difficulty || !symbol_seed) {
       return ctx.badRequest("Поля quest_text, difficulty и symbol_seed обязательны.");
@@ -32,16 +30,15 @@ export default factories.createCoreController('api::card.card', ({ strapi }) => 
 
     const data: any = {
       quest_text,
-      difficulty,
+      difficulty: difficulty as 'easy' | 'medium' | 'hard',
       symbol_seed,
       owner: user.id,
       slug,
       publishedAt: new Date().toISOString(),
     };
 
-    if (category) {
-      const categorySlugs = Array.isArray(category) ? category : [category];
-      const normalizedSlugs = categorySlugs
+    if (categoriesInput) {
+      const normalizedSlugs = (Array.isArray(categoriesInput) ? categoriesInput : [categoriesInput])
         .map((value) => (typeof value === "string" ? value : null))
         .filter((value): value is string => Boolean(value));
 
@@ -52,28 +49,51 @@ export default factories.createCoreController('api::card.card', ({ strapi }) => 
           limit: normalizedSlugs.length,
         });
 
-        const categoryIds =
-          (Array.isArray(categories) ? categories : [])
-            .map((item) => item?.id)
-            .filter((id): id is number | string => id !== null && id !== undefined);
+        const categoryIds = (Array.isArray(categories) ? categories : [])
+          .map((item) => item?.id)
+          .filter((id): id is number | string => id !== null && id !== undefined);
 
         if (categoryIds.length > 0) {
-          data.categories = categoryIds;
+          data.categories = { connect: categoryIds.map((id) => ({ id })) };
         }
       }
     }
 
     try {
-      const card = await strapi.entityService.create('api::card.card', {
+      const created = await strapi.entityService.create('api::card.card', {
         data,
         populate: ['owner', 'categories'],
       });
 
-      const sanitizedEntity = await this.sanitizeOutput(card, ctx);
+      const sanitizedEntity = await this.sanitizeOutput(created, ctx);
       return this.transformResponse(sanitizedEntity);
     } catch (error) {
-      strapi.log.error("Failed to create card via addCard:", error);
+      strapi.log.error("Failed to create card:", error);
       return ctx.internalServerError("Не удалось создать карточку. Попробуйте позже.");
+    }
+  },
+
+  async mine(ctx) {
+    const user = ctx.state.user;
+
+    if (!user) {
+      return ctx.unauthorized("Необходима авторизация");
+    }
+
+    try {
+      const cards = await strapi.entityService.findMany('api::card.card', {
+        filters: {
+          owner: user.id,
+        },
+        populate: ['categories', 'owner'],
+        sort: { createdAt: 'desc' },
+      });
+
+      const sanitized = await this.sanitizeOutput(cards, ctx);
+      return this.transformResponse(sanitized);
+    } catch (error) {
+      strapi.log.error("Failed to load user cards:", error);
+      return ctx.internalServerError("Не удалось загрузить карточки.");
     }
   },
 }));

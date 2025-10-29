@@ -120,17 +120,19 @@ export default function Home() {
     setCardActionError(null);
 
     try {
-      const res = await fetch("/cms/api/cards/add", {
+      const res = await fetch("/cms/api/cards", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
           Authorization: `Bearer ${jwt}`,
         },
         body: JSON.stringify({
-          quest_text: questForCard.quest,
-          difficulty,
-          symbol_seed: questForCard.symbolSeed,
-          category: quest?.category ?? null,
+          data: {
+            quest_text: questForCard.quest,
+            difficulty,
+            symbol_seed: questForCard.symbolSeed,
+            categories: quest?.category ? [quest.category] : undefined,
+          },
         }),
       });
 
