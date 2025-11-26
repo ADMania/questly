@@ -302,7 +302,7 @@ function buildQuestData(
     const counts = SLOTS.map((slot) => `${slot}:${fragmentsBySlot[slot].length}`).join(", ");
     strapi.log?.error?.(
       `[quests.generate] Validation failed: categories=${categorySet.size}, difficulties=${difficultySet.size}, ` +
-        `inputCategories=${categories.length}, inputDifficulties=${difficulties.length}, fragments=${fragments.length}, perSlot={${counts}}`
+      `inputCategories=${categories.length}, inputDifficulties=${difficulties.length}, fragments=${fragments.length}, perSlot={${counts}}`
     );
     throw new Error("Categories or difficulties collections are empty.");
   }
@@ -343,7 +343,18 @@ function generateQuest(data: QuestSourceData, options: GenerateOptions): Generat
   const selectedFragments: string[] = [];
   const parts: string[] = [];
 
-  for (const slot of SLOTS) {
+  // Determine which slots to use based on difficulty
+  let activeSlots: SlotKey[] = ["action", "place", "object"];
+
+  if (selectedDifficulty === "easy") {
+    activeSlots = ["action"];
+  } else if (selectedDifficulty === "medium") {
+    // Medium: Action + (Place OR Object)
+    activeSlots = Math.random() < 0.5 ? ["action", "place"] : ["action", "object"];
+  }
+  // Hard (or other): use all slots ["action", "place", "object"]
+
+  for (const slot of activeSlots) {
     const candidates = data.fragments[slot].filter((fragment) => {
       const matchesCategory = fragment.categories.length === 0 || fragment.categories.includes(selectedCategory);
       const matchesDifficulty =

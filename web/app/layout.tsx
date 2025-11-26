@@ -78,7 +78,7 @@ export default function RootLayout({
         <footer
           className="text-center text-sm py-4 mt-10 text-[#5e4632] bg-[#fff9eb]/60 border-t border-[#d2a06f]/30"
         >
-          Сделано <span className="font-semibold">Infera</span> ·{" "}
+          © 2025 Infera |{" "}
           <a
             href="mailto:infera-sys@yandex.ru"
             className="underline-offset-2 hover:underline"
