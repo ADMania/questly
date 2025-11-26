@@ -1,3 +1,4 @@
+// TODO: Настроить вёрстку под телефоны
 "use client";
 
 import { useState } from "react";

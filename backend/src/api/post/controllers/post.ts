@@ -218,4 +218,34 @@ export default factories.createCoreController('api::post.post', ({ strapi }) => 
       return ctx.badRequest('Error fetching posts');
     }
   },
+  async delete(ctx) {
+    const user = ctx.state.user;
+
+    if (!user) {
+      return ctx.unauthorized('Необходима авторизация.');
+    }
+
+    const { id } = ctx.params;
+
+    try {
+      const post = await strapi.entityService.findOne('api::post.post', id, {
+        populate: { author: true },
+      });
+
+      if (!post) {
+        return ctx.notFound('Пост не найден.');
+      }
+
+      if ((post as any).author?.id !== user.id) {
+        return ctx.forbidden('Вы не можете удалить чужой пост.');
+      }
+
+      const deletedEntry = await strapi.entityService.delete('api::post.post', id);
+      const sanitized = await this.sanitizeOutput(deletedEntry, ctx);
+      return this.transformResponse(sanitized);
+    } catch (error) {
+      strapi.log.error('[posts.delete] Failed to delete entry', error);
+      return ctx.internalServerError('Не удалось удалить пост.');
+    }
+  },
 }));
