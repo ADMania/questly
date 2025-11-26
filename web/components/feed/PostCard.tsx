@@ -1,5 +1,6 @@
-// TODO: Настроить вёрстку под телефоны
 "use client";
+
+// TODO: Настроить вёрстку под телефоны
 
 import { useState } from "react";
 import AdventureCard from "@/components/cards/AdventureCard";
@@ -34,21 +35,93 @@ export default function PostCard({ post, onDelete }: PostCardProps) {
     const [votes, setVotes] = useState(0);
     const [userVote, setUserVote] = useState<"up" | "down" | null>(null);
 
+    // Comments state
+    const [comments, setComments] = useState<any[]>([]);
+    const [isLoadingComments, setIsLoadingComments] = useState(false);
+    const [commentText, setCommentText] = useState("");
+    const [isPostingComment, setIsPostingComment] = useState(false);
+    const [showComments, setShowComments] = useState(false);
+
     const handleVote = (type: "up" | "down") => {
         if (userVote === type) {
-            // Toggle off
             setUserVote(null);
             setVotes((prev) => (type === "up" ? prev - 1 : prev + 1));
         } else {
-            // Switch vote or new vote
             if (userVote === "up") {
-                setVotes((prev) => prev - 2); // +1 -> -1
+                setVotes((prev) => prev - 2);
             } else if (userVote === "down") {
-                setVotes((prev) => prev + 2); // -1 -> +1
+                setVotes((prev) => prev + 2);
             } else {
                 setVotes((prev) => (type === "up" ? prev + 1 : prev - 1));
             }
             setUserVote(type);
+        }
+    };
+
+    const fetchComments = async () => {
+        setIsLoadingComments(true);
+        try {
+            const response = await fetch(
+                `${process.env.NEXT_PUBLIC_STRAPI_URL}/api/comments/post/${post.id}`
+            );
+            const data = await response.json();
+            if (data.data) {
+                setComments(data.data);
+            }
+        } catch (error) {
+            console.error("Failed to fetch comments:", error);
+        } finally {
+            setIsLoadingComments(false);
+        }
+    };
+
+    const toggleComments = () => {
+        if (!showComments) {
+            fetchComments();
+        }
+        setShowComments(!showComments);
+    };
+
+    const handlePostComment = async (e: React.FormEvent) => {
+        e.preventDefault();
+        if (!commentText.trim()) return;
+
+        setIsPostingComment(true);
+        try {
+            const token = localStorage.getItem("jwt");
+            if (!token) {
+                alert("Пожалуйста, войдите, чтобы оставить комментарий.");
+                return;
+            }
+
+            const response = await fetch(`${process.env.NEXT_PUBLIC_STRAPI_URL}/api/comments`, {
+                method: "POST",
+                headers: {
+                    "Content-Type": "application/json",
+                    Authorization: `Bearer ${token}`,
+                },
+                body: JSON.stringify({
+                    data: {
+                        content: commentText,
+                        post: post.id,
+                    },
+                }),
+            });
+
+            if (!response.ok) {
+                throw new Error("Failed to post comment");
+            }
+
+            const newComment = await response.json();
+
+            // Refresh comments
+            fetchComments();
+            setCommentText("");
+        } catch (error) {
+            console.error("Error posting comment:", error);
+            alert("Не удалось отправить комментарий.");
+        } finally {
+            setIsPostingComment(false);
         }
     };
 
@@ -122,9 +195,8 @@ export default function PostCard({ post, onDelete }: PostCardProps) {
                         )}
                     </div>
 
-                    {/* Post Content (Comment) */}
+                    {/* Post Content */}
                     <div className="relative rounded-2xl border-2 border-[#d2a06f] bg-[#fff9eb] p-6 shadow-[0_4px_0_#c99063]">
-                        {/* Speech bubble tail */}
                         <div className="absolute top-6 -left-[18px] w-0 h-0 border-t-[10px] border-t-transparent border-r-[18px] border-r-[#d2a06f] border-b-[10px] border-b-transparent hidden lg:block" />
                         <div className="absolute top-6 -left-[15px] w-0 h-0 border-t-[7px] border-t-transparent border-r-[15px] border-r-[#fff9eb] border-b-[7px] border-b-transparent hidden lg:block" />
 
@@ -132,44 +204,96 @@ export default function PostCard({ post, onDelete }: PostCardProps) {
                         <p className="text-[#5e4632] leading-relaxed whitespace-pre-line">{post.content}</p>
                     </div>
 
-                    {/* Actions & Comments Placeholder */}
-                    <div className="mt-6 flex flex-col sm:flex-row items-center justify-between gap-4">
-                        {/* Voting */}
-                        <div className="flex items-center gap-2 rounded-xl border-2 border-[#d2a06f]/50 bg-white/60 p-1.5">
+                    {/* Actions & Comments */}
+                    <div className="mt-6">
+                        <div className="flex flex-col sm:flex-row items-center justify-between gap-4">
+                            {/* Voting */}
+                            <div className="flex items-center gap-2 rounded-xl border-2 border-[#d2a06f]/50 bg-white/60 p-1.5">
+                                <button
+                                    onClick={() => handleVote("up")}
+                                    className={`p-2 rounded-lg transition-all ${userVote === "up"
+                                        ? "bg-[#8ab58a] text-white shadow-sm"
+                                        : "hover:bg-[#8ab58a]/20 text-[#5e4632]"
+                                        }`}
+                                >
+                                    <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                                        <path d="m18 15-6-6-6 6" />
+                                    </svg>
+                                </button>
+                                <span className={`font-bold min-w-[24px] text-center ${userVote === "up" ? "text-[#6a956a]" : userVote === "down" ? "text-[#d06767]" : "text-[#5e4632]"
+                                    }`}>
+                                    {votes > 0 ? `+${votes}` : votes}
+                                </span>
+                                <button
+                                    onClick={() => handleVote("down")}
+                                    className={`p-2 rounded-lg transition-all ${userVote === "down"
+                                        ? "bg-[#d06767] text-white shadow-sm"
+                                        : "hover:bg-[#d06767]/20 text-[#5e4632]"
+                                        }`}
+                                >
+                                    <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                                        <path d="m6 9 6 6 6-6" />
+                                    </svg>
+                                </button>
+                            </div>
+
+                            {/* Comments Toggle */}
                             <button
-                                onClick={() => handleVote("up")}
-                                className={`p-2 rounded-lg transition-all ${userVote === "up"
-                                    ? "bg-[#8ab58a] text-white shadow-sm"
-                                    : "hover:bg-[#8ab58a]/20 text-[#5e4632]"
-                                    }`}
+                                onClick={toggleComments}
+                                className="flex-1 w-full sm:w-auto h-12 rounded-xl border-2 border-[#d2a06f]/40 bg-[#fff9eb]/50 hover:bg-[#fff9eb] hover:border-[#d2a06f] transition-all flex items-center justify-center px-4 text-sm font-semibold text-[#5e4632]"
                             >
-                                <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-                                    <path d="m18 15-6-6-6 6" />
-                                </svg>
-                            </button>
-                            <span className={`font-bold min-w-[24px] text-center ${userVote === "up" ? "text-[#6a956a]" : userVote === "down" ? "text-[#d06767]" : "text-[#5e4632]"
-                                }`}>
-                                {votes > 0 ? `+${votes}` : votes}
-                            </span>
-                            <button
-                                onClick={() => handleVote("down")}
-                                className={`p-2 rounded-lg transition-all ${userVote === "down"
-                                    ? "bg-[#d06767] text-white shadow-sm"
-                                    : "hover:bg-[#d06767]/20 text-[#5e4632]"
-                                    }`}
-                            >
-                                <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-                                    <path d="m6 9 6 6 6-6" />
-                                </svg>
+                                {showComments ? "Скрыть комментарии" : "Показать комментарии"}
                             </button>
                         </div>
 
-                        {/* Comments Placeholder */}
-                        <div className="flex-1 w-full sm:w-auto">
-                            <div className="w-full h-12 rounded-xl border-2 border-dashed border-[#d2a06f]/40 bg-[#fff9eb]/50 flex items-center px-4 text-sm text-[#5e4632]/60 cursor-not-allowed">
-                                Комментарии пока недоступны...
+                        {/* Comments Section */}
+                        {showComments && (
+                            <div className="mt-6 space-y-6 pl-2 sm:pl-0">
+                                {/* Comment Form */}
+                                <form onSubmit={handlePostComment} className="flex gap-3">
+                                    <input
+                                        type="text"
+                                        value={commentText}
+                                        onChange={(e) => setCommentText(e.target.value)}
+                                        placeholder="Написать комментарий..."
+                                        className="flex-1 rounded-xl border-2 border-[#d2a06f]/30 bg-white/80 px-4 py-2.5 text-sm text-[#3c2415] placeholder:text-[#5e4632]/40 focus:border-[#d2a06f] focus:outline-none focus:ring-0"
+                                    />
+                                    <button
+                                        type="submit"
+                                        disabled={isPostingComment || !commentText.trim()}
+                                        className="rounded-xl bg-[#d2a06f] px-4 py-2.5 font-bold text-white transition hover:bg-[#c59060] disabled:opacity-50 disabled:cursor-not-allowed"
+                                    >
+                                        {isPostingComment ? "..." : "➤"}
+                                    </button>
+                                </form>
+
+                                {/* Comments List */}
+                                <div className="space-y-3 max-h-80 overflow-y-auto pr-2 custom-scrollbar">
+                                    {isLoadingComments ? (
+                                        <div className="text-center text-sm text-[#5e4632]/60 py-4">Загрузка комментариев...</div>
+                                    ) : comments.length > 0 ? (
+                                        comments.map((comment) => (
+                                            <div key={comment.id} className="relative bg-[#fff9eb] rounded-xl p-4 border-2 border-[#d2a06f]/20 shadow-sm hover:border-[#d2a06f]/40 transition-colors">
+                                                <div className="absolute top-3 left-0 w-1 h-full rounded-r-full" />
+                                                <p className="text-[#5e4632] text-sm leading-relaxed pl-2">{comment.content}</p>
+                                                <div className="mt-2 text-[10px] uppercase tracking-wider font-bold text-[#d2a06f] text-right">
+                                                    {new Date(comment.createdAt).toLocaleDateString("ru-RU", {
+                                                        day: "numeric",
+                                                        month: "long",
+                                                        hour: "2-digit",
+                                                        minute: "2-digit"
+                                                    })}
+                                                </div>
+                                            </div>
+                                        ))
+                                    ) : (
+                                        <div className="text-center text-sm text-[#5e4632]/40 py-4 italic bg-[#fff9eb]/30 rounded-xl border border-dashed border-[#d2a06f]/20">
+                                            Тишина... Будьте первым, кто нарушит её!
+                                        </div>
+                                    )}
+                                </div>
                             </div>
-                        </div>
+                        )}
                     </div>
                 </div>
             </div>
