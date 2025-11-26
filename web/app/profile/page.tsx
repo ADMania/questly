@@ -11,7 +11,10 @@ const tabs: { key: "quests" | "activity"; label: string }[] = [
   { key: "activity", label: "Активность" },
 ];
 
-const generateClientId = () => (typeof crypto !== "undefined" && "randomUUID" in crypto ? crypto.randomUUID() : `tmp-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`);
+const generateClientId = () =>
+  typeof crypto !== "undefined" && "randomUUID" in crypto
+    ? crypto.randomUUID()
+    : `tmp-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
 
 type Card = {
   id: number | string;
@@ -20,13 +23,216 @@ type Card = {
   symbol_seed: string;
   primaryCategory: string;
   categories: string[];
+  postId: number | string | null;
+};
+
+type PostCardSummary = {
+  id: number | string;
+  questText: string;
+  category: string;
+  difficulty: Card["difficulty"];
+  symbolSeed: string;
 };
 
 type Post = {
   id: number | string;
   title: string;
   content: string;
+  createdAt: string | null;
+  attachedCard: PostCardSummary | null;
 };
+
+interface PostComposerModalProps {
+  card: Card;
+  title: string;
+  content: string;
+  isPublic: boolean;
+  isSubmitting: boolean;
+  error: string | null;
+  onClose: () => void;
+  onTitleChange: (value: string) => void;
+  onContentChange: (value: string) => void;
+  onVisibilityChange: (value: boolean) => void;
+  onSubmit: () => void;
+}
+
+const DIFFICULTY_LABELS: Record<Card["difficulty"], string> = {
+  easy: "Лёгкое приключение",
+  medium: "Среднее приключение",
+  hard: "Тяжёлое приключение",
+};
+
+const formatPostDate = (value?: string | null) => {
+  if (!value) return "";
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) {
+    return "";
+  }
+  return date.toLocaleDateString("ru-RU", {
+    day: "numeric",
+    month: "long",
+    year: "numeric",
+  });
+};
+
+const readCategoryEntries = (source: any) => {
+  if (!source) return [];
+  if (Array.isArray(source)) return source;
+  if (Array.isArray(source?.data)) return source.data;
+  return [];
+};
+
+const normalizePostEntry = (entry: any): Post => {
+  const baseEntry = entry?.data ?? entry ?? {};
+  // Strapi 5 returns flattened data, Strapi 4 returns attributes. Handle both.
+  const attributes = baseEntry?.attributes ?? baseEntry;
+
+  const attachedCardData = attributes?.attached_card?.data ?? attributes?.attached_card ?? null;
+  const cardAttributes = attachedCardData?.attributes ?? attachedCardData ?? {};
+
+  const categoriesRaw = readCategoryEntries(cardAttributes?.categories).map((category: any) => {
+    const attr = category?.attributes ?? category ?? {};
+    const value = attr.slug ?? attr.name ?? attr.title ?? "";
+    if (typeof value !== "string" || !value.trim()) {
+      return null;
+    }
+    const label = getCategoryLabel(value);
+    return label || value;
+  });
+
+  const filteredCategories = categoriesRaw.filter((value: unknown): value is string => typeof value === "string" && value.length > 0);
+
+  return {
+    id: baseEntry?.id ?? generateClientId(),
+    title: typeof attributes?.title === "string" && attributes.title.trim().length > 0 ? attributes.title : "Без названия",
+    content: typeof attributes?.content === "string" ? attributes.content : "",
+    createdAt: typeof attributes?.createdAt === "string" ? attributes.createdAt : null,
+    attachedCard: attachedCardData
+      ? {
+        id: attachedCardData?.id ?? generateClientId(),
+        questText:
+          typeof cardAttributes?.quest_text === "string" && cardAttributes?.quest_text.trim().length > 0
+            ? cardAttributes.quest_text
+            : "Приключение",
+        category: filteredCategories[0] ?? getCategoryLabelOrFallback(undefined, "Личное приключение"),
+        difficulty:
+          (["easy", "medium", "hard"].includes(cardAttributes?.difficulty)
+            ? cardAttributes.difficulty
+            : "medium") as Card["difficulty"],
+        symbolSeed:
+          typeof cardAttributes?.symbol_seed === "string" && cardAttributes.symbol_seed.length > 0
+            ? cardAttributes.symbol_seed
+            : String(attachedCardData?.id ?? generateClientId()),
+      }
+      : null,
+  };
+};
+
+function PostComposerModal({
+  card,
+  title,
+  content,
+  isPublic,
+  isSubmitting,
+  error,
+  onClose,
+  onTitleChange,
+  onContentChange,
+  onVisibilityChange,
+  onSubmit,
+}: PostComposerModalProps) {
+  const difficultyLabel = DIFFICULTY_LABELS[card.difficulty];
+
+  return (
+    <div className="fixed inset-0 z-[120] flex items-center justify-center bg-black/40 backdrop-blur-sm px-4 sm:px-6" role="dialog" aria-modal="true">
+      <div className="relative w-full max-w-2xl rounded-3xl border-2 border-[#d2a06f] bg-[#fff9eb] text-[#3c2415] shadow-[0_8px_0_#c99063,0_18px_30px_rgba(0,0,0,0.2)] p-6 sm:p-8">
+        <button
+          type="button"
+          onClick={onClose}
+          disabled={isSubmitting}
+          className="absolute top-4 right-4 text-3xl font-semibold text-[#d26d75] transition hover:scale-110 disabled:cursor-not-allowed disabled:opacity-50"
+        >
+          ×
+        </button>
+
+        <h2 className="text-2xl font-extrabold text-[#d26d75]" style={{ textShadow: "0 2px 3px rgba(0,0,0,0.12)" }}>
+          Поделиться приключением
+        </h2>
+        <p className="mt-2 text-sm text-[#5e4632]">Расскажите, как прошёл квест, и мы добавим его в вашу активность и общую ленту.</p>
+
+        <div className="mt-4 rounded-2xl border-2 border-[#d2a06f]/60 bg-white/70 p-4">
+          <div className="text-xs font-semibold text-[#c57758] uppercase tracking-wide">{card.primaryCategory}</div>
+          <p className="mt-1 text-sm text-[#5e4632]">{card.quest_text}</p>
+          <p className="mt-2 text-xs text-[#5e4632]/80">{difficultyLabel}</p>
+        </div>
+
+        <div className="mt-6 space-y-4">
+          <label className="flex flex-col gap-2 text-sm font-semibold text-[#5e4632]">
+            Заголовок
+            <input
+              type="text"
+              value={title}
+              maxLength={120}
+              disabled={isSubmitting}
+              onChange={(event) => onTitleChange(event.target.value)}
+              className="rounded-xl border-2 border-[#d2a06f]/70 bg-white/80 px-4 py-2 text-base font-normal text-[#3c2415] shadow-inner shadow-[#f3ead9]"
+              placeholder="Например, «Как я прошёл это приключение»"
+            />
+          </label>
+
+          <label className="flex flex-col gap-2 text-sm font-semibold text-[#5e4632]">
+            История
+            <textarea
+              value={content}
+              maxLength={1600}
+              disabled={isSubmitting}
+              onChange={(event) => onContentChange(event.target.value)}
+              rows={5}
+              className="rounded-xl border-2 border-[#d2a06f]/70 bg-white/80 px-4 py-3 text-base font-normal text-[#3c2415] shadow-inner shadow-[#f3ead9] resize-y"
+              placeholder="Поделитесь впечатлениями или советами."
+            />
+          </label>
+
+          <label className="flex items-center gap-3 text-sm font-medium text-[#5e4632]">
+            <input
+              type="checkbox"
+              className="h-4 w-4 rounded border-[#d2a06f]"
+              checked={isPublic}
+              disabled={isSubmitting}
+              onChange={(event) => onVisibilityChange(event.target.checked)}
+            />
+            Показывать пост в общей ленте
+          </label>
+        </div>
+
+        {error && (
+          <p className="mt-4 rounded-xl border-2 border-[#e28b82] bg-[#fde7e5] px-4 py-2 text-sm text-[#b73d3d]" role="alert">
+            {error}
+          </p>
+        )}
+
+        <div className="mt-6 flex flex-col gap-3 sm:flex-row sm:justify-end">
+          <button
+            type="button"
+            onClick={onClose}
+            disabled={isSubmitting}
+            className="w-full sm:w-auto rounded-xl border-2 border-[#d2a06f] bg-[#fff9eb] px-5 py-2.5 text-sm font-semibold text-[#4a2c1f] shadow-[0_3px_0_#c99063] transition hover:-translate-y-0.5 hover:shadow-[0_5px_0_#c99063] disabled:cursor-not-allowed disabled:opacity-60"
+          >
+            Отмена
+          </button>
+          <button
+            type="button"
+            onClick={onSubmit}
+            disabled={isSubmitting}
+            className="w-full sm:w-auto rounded-xl border-2 border-[#d2a06f] bg-[#d26d75] px-5 py-2.5 text-sm font-semibold text-[#fff9eb] shadow-[0_3px_0_#a9565d] transition hover:-translate-y-0.5 hover:shadow-[0_5px_0_#a9565d] disabled:cursor-not-allowed disabled:opacity-60"
+          >
+            {isSubmitting ? "Публикуем..." : "Опубликовать"}
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
 
 export default function ProfilePage() {
   const router = useRouter();
@@ -37,6 +243,12 @@ export default function ProfilePage() {
   const [posts, setPosts] = useState<Post[]>([]);
   const [postsError, setPostsError] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
+  const [cardForPost, setCardForPost] = useState<Card | null>(null);
+  const [postTitle, setPostTitle] = useState("");
+  const [postContent, setPostContent] = useState("");
+  const [postIsPublic, setPostIsPublic] = useState(true);
+  const [postError, setPostError] = useState<string | null>(null);
+  const [isSubmittingPost, setIsSubmittingPost] = useState(false);
 
   const api = process.env.NEXT_PUBLIC_STRAPI_URL || "http://localhost:1337";
 
@@ -51,6 +263,92 @@ export default function ProfilePage() {
     window.dispatchEvent(new Event("questly-auth-change"));
     router.push("/");
   }, [router]);
+
+  const openPostComposer = (card: Card) => {
+    if (card.postId) return;
+    const questTitle = card.quest_text.trim();
+    const defaultTitle = questTitle.length > 90 ? `${questTitle.slice(0, 90)}…` : questTitle;
+    setCardForPost(card);
+    setPostTitle(defaultTitle || "Моё приключение");
+    setPostContent("");
+    setPostIsPublic(true);
+    setPostError(null);
+  };
+
+  const closePostComposer = () => {
+    setCardForPost(null);
+    setPostTitle("");
+    setPostContent("");
+    setPostIsPublic(true);
+    setPostError(null);
+  };
+
+  const handlePublishPost = async () => {
+    if (!cardForPost || isSubmittingPost) return;
+
+    const trimmedTitle = postTitle.trim();
+    const trimmedContent = postContent.trim();
+
+    if (trimmedTitle.length < 3) {
+      setPostError("Добавьте заголовок (минимум 3 символа).");
+      return;
+    }
+
+    if (trimmedContent.length < 10) {
+      setPostError("Опишите приключение минимум в 10 символов.");
+      return;
+    }
+
+    const jwt = localStorage.getItem("jwt");
+
+    if (!jwt) {
+      setPostError("Сессия истекла. Войдите снова.");
+      router.push("/login");
+      return;
+    }
+
+    setIsSubmittingPost(true);
+    setPostError(null);
+
+    try {
+      const res = await fetch("/cms/api/posts", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${jwt}`,
+        },
+        body: JSON.stringify({
+          data: {
+            title: trimmedTitle,
+            content: trimmedContent,
+            cardId: cardForPost.id,
+            is_public: postIsPublic,
+          },
+        }),
+      });
+
+      const payload = await res.json();
+
+      if (!res.ok) {
+        const errorMessage = payload?.error?.message ?? "Не удалось сохранить пост.";
+        throw new Error(errorMessage);
+      }
+
+      const normalizedPost = normalizePostEntry(payload?.data ?? payload);
+      setPosts((prev) => [normalizedPost, ...prev]);
+      setCards((prev) =>
+        prev.map((card) =>
+          String(card.id) === String(cardForPost.id) ? { ...card, postId: normalizedPost.id } : card,
+        ),
+      );
+      setActive("activity");
+      closePostComposer();
+    } catch (error: any) {
+      setPostError(error?.message ?? "Не удалось сохранить пост.");
+    } finally {
+      setIsSubmittingPost(false);
+    }
+  };
 
   // 🔹 Получаем данные пользователя и связанные коллекции
   useEffect(() => {
@@ -86,48 +384,52 @@ export default function ProfilePage() {
 
         const normalizedCards: Card[] = Array.isArray(profileData?.cards)
           ? profileData.cards.map((card: any) => {
-              const categoriesList = Array.isArray(card?.categories) ? card.categories : [];
-              const categoryTitles = categoriesList
-                .map((item: any) => {
-                  if (!item) return null;
-                  const rawValue =
-                    typeof item === "string"
-                      ? item
-                      : item.title ?? item.name ?? item.slug ?? null;
-                  if (typeof rawValue !== "string" || rawValue.trim().length === 0) {
-                    return null;
-                  }
-                  const label = getCategoryLabel(rawValue);
-                  const readable = label || rawValue;
-                  return readable.trim().length > 0 ? readable : null;
-                })
-                .filter((value: unknown): value is string => typeof value === "string" && value.length > 0);
+            const categoriesList = Array.isArray(card?.categories) ? card.categories : [];
+            const categoryTitles = categoriesList
+              .map((item: any) => {
+                if (!item) return null;
+                const rawValue =
+                  typeof item === "string"
+                    ? item
+                    : item.title ?? item.name ?? item.slug ?? null;
+                if (typeof rawValue !== "string" || rawValue.trim().length === 0) {
+                  return null;
+                }
+                const label = getCategoryLabel(rawValue);
+                const readable = label || rawValue;
+                return readable.trim().length > 0 ? readable : null;
+              })
+              .filter((value: unknown): value is string => typeof value === "string" && value.length > 0);
 
-              const difficultyValue = typeof card?.difficulty === "string" ? card.difficulty : "medium";
-              const normalizedDifficulty: Card["difficulty"] =
-                ["easy", "medium", "hard"].includes(difficultyValue)
-                  ? (difficultyValue as Card["difficulty"])
-                  : "medium";
+            const difficultyValue = typeof card?.difficulty === "string" ? card.difficulty : "medium";
+            const normalizedDifficulty: Card["difficulty"] =
+              ["easy", "medium", "hard"].includes(difficultyValue)
+                ? (difficultyValue as Card["difficulty"])
+                : "medium";
 
-              const questText =
-                typeof card?.quest_text === "string" && card.quest_text.trim().length > 0
-                  ? card.quest_text
-                  : "Без описания";
+            const questText =
+              typeof card?.quest_text === "string" && card.quest_text.trim().length > 0
+                ? card.quest_text
+                : "Без описания";
 
-              const symbolSeed =
-                typeof card?.symbol_seed === "string" && card.symbol_seed.length > 0
-                  ? card.symbol_seed
-                  : String(card?.id ?? Date.now());
+            const symbolSeed =
+              typeof card?.symbol_seed === "string" && card.symbol_seed.length > 0
+                ? card.symbol_seed
+                : String(card?.id ?? Date.now());
 
-              return {
-                id: card?.id ?? generateClientId(),
-                quest_text: questText,
-                difficulty: normalizedDifficulty,
-                symbol_seed: symbolSeed,
-                primaryCategory: categoryTitles[0] ?? getCategoryLabelOrFallback(undefined, "Личное приключение"),
-                categories: categoryTitles,
-              };
-            })
+            return {
+              id: card?.id ?? generateClientId(),
+              quest_text: questText,
+              difficulty: normalizedDifficulty,
+              symbol_seed: symbolSeed,
+              primaryCategory: categoryTitles[0] ?? getCategoryLabelOrFallback(undefined, "Личное приключение"),
+              categories: categoryTitles,
+              postId:
+                typeof card?.post_id === "number" || typeof card?.post_id === "string"
+                  ? card.post_id
+                  : null,
+            };
+          })
           : [];
 
         setCards(normalizedCards);
@@ -138,6 +440,7 @@ export default function ProfilePage() {
           postParams.append("filters[author][id][$eq]", String(profileData.id));
         }
         postParams.append("sort", "createdAt:desc");
+        postParams.append("populate[attached_card][populate]", "categories");
 
         if (!postParams.has("filters[author][id][$eq]")) {
           setPosts([]);
@@ -150,15 +453,9 @@ export default function ProfilePage() {
         let normalizedPosts: Post[] = [];
         if (postsRes.ok) {
           const postsData = await postsRes.json();
-          normalizedPosts =
-            (Array.isArray(postsData?.data) ? postsData.data : []).map((entry: any) => {
-              const attrs = entry?.attributes ?? {};
-              return {
-                id: entry?.id ?? attrs?.id ?? generateClientId(),
-                title: attrs?.title ?? "Без названия",
-                content: attrs?.content ?? "",
-              };
-            });
+          normalizedPosts = (Array.isArray(postsData?.data) ? postsData.data : []).map((entry: any) =>
+            normalizePostEntry(entry),
+          );
         } else if (postsRes.status === 401) {
           setPosts([]);
           router.push("/login");
@@ -310,6 +607,19 @@ export default function ProfilePage() {
                         {card.categories.join(", ")}
                       </div>
                     )}
+                    <div className="mt-4 w-full max-w-[320px]">
+                      <button
+                        type="button"
+                        onClick={() => openPostComposer(card)}
+                        disabled={Boolean(card.postId)}
+                        className="w-full rounded-xl border-2 border-[#d2a06f] bg-[#fff9eb] px-4 py-2 text-sm font-semibold text-[#4a2c1f] shadow-[0_3px_0_#c99063] transition hover:-translate-y-0.5 hover:shadow-[0_5px_0_#c99063] disabled:cursor-not-allowed disabled:opacity-60"
+                      >
+                        {card.postId ? "Пост опубликован" : "Поделиться в ленте"}
+                      </button>
+                      {card.postId && (
+                        <p className="mt-2 text-center text-xs text-[#5e4632]/70">Вы уже поделились этим приключением.</p>
+                      )}
+                    </div>
                   </div>
                 ))
               ) : (
@@ -330,15 +640,27 @@ export default function ProfilePage() {
             )}
             <div className="space-y-4">
               {posts.length > 0 ? (
-                posts.map((post) => (
-                  <div
-                    key={post.id}
-                    className="rounded-xl border-2 border-[#d2a06f] bg-[#fff9eb] shadow-[0_3px_0_#c99063,0_4px_6px_rgba(0,0,0,0.15)] p-4"
-                  >
-                    <h3 className="font-bold text-[#d26d75]">{post.title}</h3>
-                    <p className="text-[#5e4632] text-sm mt-2">{post.content}</p>
-                  </div>
-                ))
+                posts.map((post) => {
+                  const publishedAt = formatPostDate(post.createdAt);
+                  return (
+                    <div
+                      key={post.id}
+                      className="rounded-xl border-2 border-[#d2a06f] bg-[#fff9eb] shadow-[0_3px_0_#c99063,0_4px_6px_rgba(0,0,0,0.15)] p-4"
+                    >
+                      <div className="flex flex-col gap-1 sm:flex-row sm:items-center sm:justify-between">
+                        <h3 className="font-bold text-[#d26d75]">{post.title}</h3>
+                        {publishedAt && <span className="text-xs text-[#5e4632]/70">Опубликовано {publishedAt}</span>}
+                      </div>
+                      <p className="text-[#5e4632] text-sm mt-2 whitespace-pre-line">{post.content}</p>
+                      {post.attachedCard && (
+                        <div className="mt-3 rounded-lg border border-[#d2a06f]/50 bg-white/70 px-3 py-2 text-xs text-[#5e4632]">
+                          <p className="font-semibold text-[#c57758]">{post.attachedCard.category}</p>
+                          <p className="mt-1 font-medium text-[#3c2415]">{post.attachedCard.questText}</p>
+                        </div>
+                      )}
+                    </div>
+                  );
+                })
               ) : (
                 <div className="flex flex-col items-center justify-center py-12 text-center text-[#5e4632]/70 min-h-[220px]">
                   <p>Пока нет активности. Поделитесь приключением, чтобы оживить ленту!</p>
@@ -348,6 +670,22 @@ export default function ProfilePage() {
           </>
         )}
       </section>
+
+      {cardForPost && (
+        <PostComposerModal
+          card={cardForPost}
+          title={postTitle}
+          content={postContent}
+          isPublic={postIsPublic}
+          isSubmitting={isSubmittingPost}
+          error={postError}
+          onClose={closePostComposer}
+          onTitleChange={setPostTitle}
+          onContentChange={setPostContent}
+          onVisibilityChange={setPostIsPublic}
+          onSubmit={handlePublishPost}
+        />
+      )}
     </main>
   );
 }

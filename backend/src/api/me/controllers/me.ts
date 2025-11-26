@@ -11,6 +11,9 @@ type CardEntity = {
     name?: string | null;
     title?: string | null;
   }>;
+  post?: {
+    id: number | string;
+  } | null;
 };
 
 export default factories.createCoreController('plugin::users-permissions.user' as never, ({ strapi }) => ({
@@ -28,6 +31,9 @@ export default factories.createCoreController('plugin::users-permissions.user' a
         categories: {
           fields: ['slug', 'name'],
         },
+        post: {
+          fields: ['id'],
+        },
       },
       sort: { createdAt: 'desc' },
     })) as CardEntity[] | null;
@@ -43,6 +49,7 @@ export default factories.createCoreController('plugin::users-permissions.user' a
             slug: category.slug ?? null,
             title: category.title ?? category.name ?? null,
           })),
+          post_id: card.post?.id ?? null,
         }))
       : [];
 
