@@ -171,7 +171,7 @@ export default function Home() {
       <div className="pt-20 md:pt-28 w-full flex flex-col items-center gap-14 relative z-10 max-w-6xl">
         <header className="text-center space-y-4">
           <h1
-            className="text-6xl md:text-7xl font-extrabold leading-tight tracking-tight"
+            className="text-5xl md:text-7xl font-extrabold leading-tight tracking-tight"
             style={{
               color: "#d26d75",
               textShadow: "0 2px 3px rgba(0,0,0,0.15)",
@@ -179,7 +179,7 @@ export default function Home() {
           >
             Questly
           </h1>
-          <p className="text-lg md:text-xl text-[#4a2c1f] font-medium max-w-xl mx-auto">
+          <p className="text-base md:text-xl text-[#4a2c1f] font-medium max-w-xl mx-auto px-4">
             Твоя бумажная коллекция приключений ✨
           </p>
         </header>
@@ -203,9 +203,9 @@ export default function Home() {
             <button
               key={cat.key}
               onClick={() => handleCategory(cat.key)}
-              className={`relative w-36 h-28 md:w-40 md:h-32 flex items-center justify-center
+              className={`relative w-[45%] h-24 sm:w-36 sm:h-28 md:w-40 md:h-32 flex items-center justify-center
               rounded-[14px] border-2 border-[#d2a06f] bg-[#fff9eb]
-              text-lg font-semibold text-[#3c2415]
+              text-base md:text-lg font-semibold text-[#3c2415]
               shadow-[0_4px_0_#c99063,0_6px_8px_rgba(0,0,0,0.15)]
               transition-transform duration-300 ease-out
               hover:-translate-y-2 hover:rotate-[${i % 2 ? "-1.5deg" : "1.5deg"}]
@@ -266,7 +266,7 @@ export default function Home() {
         className="relative z-10 w-full max-w-3xl flex flex-col items-center mt-40"
       >
         <h2
-          className="text-5xl md:text-6xl font-extrabold mb-10 text-center"
+          className="text-4xl md:text-6xl font-extrabold mb-8 md:mb-10 text-center"
           style={{
             color: "#d26d75",
             textShadow: "0 2px 3px rgba(0,0,0,0.15)",
@@ -279,7 +279,7 @@ export default function Home() {
         <div className="flex justify-center gap-6 mb-12">
           <button
             onClick={() => setSection("about")}
-            className={`px-6 py-2 rounded-lg border-2 border-[#d2a06f] bg-[#fff9eb] text-lg font-medium transition-all duration-200
+            className={`px-4 py-2 md:px-6 rounded-lg border-2 border-[#d2a06f] bg-[#fff9eb] text-base md:text-lg font-medium transition-all duration-200
               ${section === "about"
                 ? "shadow-[0_3px_0_#c99063,0_4px_6px_rgба(0,0,0,0.15)] scale-105"
                 : "opacity-80 hover:opacity-100 hover:-translate-y-0.5"
@@ -289,7 +289,7 @@ export default function Home() {
           </button>
           <button
             onClick={() => setSection("updates")}
-            className={`px-6 py-2 rounded-lg border-2 border-[#d2a06f] bg-[#fff9eb] text-lg font-medium transition-all duration-200
+            className={`px-4 py-2 md:px-6 rounded-lg border-2 border-[#d2a06f] bg-[#fff9eb] text-base md:text-lg font-medium transition-all duration-200
               ${section === "updates"
                 ? "shadow-[0_3px_0_#c99063,0_4px_6px_rgба(0,0,0,0.15)] scale-105"
                 : "opacity-80 hover:opacity-100 hover:-translate-y-0.5"

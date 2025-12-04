@@ -125,7 +125,7 @@ export default function RegisterPage() {
               </div>
             </div>
 
-            <div className="col-span-1 lg:col-span-3 border-b-2 border-[#d2a06f] p-8 md:p-12">
+            <div className="col-span-1 lg:col-span-3 border-b-2 border-[#d2a06f] p-6 md:p-12">
               <div className="mx-auto w-full max-w-lg">
                 <div className="mb-8 text-center lg:text-left">
                   <h2 className="text-3xl font-bold text-[#d26d75]" style={{ textShadow: "0 2px 4px rgba(0,0,0,0.15)" }}>
@@ -218,8 +218,8 @@ export default function RegisterPage() {
                       role="alert"
                       aria-live="polite"
                       className={`rounded-2xl border-2 px-4 py-3 text-sm font-medium shadow-[0_3px_0_#c99063] ${message.type === "success"
-                          ? "border-[#77c97e] bg-[#e3f8e7] text-[#2f7a3b]"
-                          : "border-[#e28b82] bg-[#fde7e5] text-[#b73d3d]"
+                        ? "border-[#77c97e] bg-[#e3f8e7] text-[#2f7a3b]"
+                        : "border-[#e28b82] bg-[#fde7e5] text-[#b73d3d]"
                         }`}
                     >
                       {message.text}

@@ -43,34 +43,34 @@ export default function AppHeader() {
   return (
     <header className="w-full flex justify-center mt-4 mb-6">
       <nav
-        className="flex items-center gap-10 px-10 py-3 rounded-[16px]
+        className="flex items-center gap-4 md:gap-10 px-6 md:px-10 py-3 rounded-[16px]
         border-2 border-[#d2a06f] bg-[#fff9eb]
         shadow-[0_4px_0_#c99063,0_6px_8px_rgba(0,0,0,0.15)]
         text-[#4a2c1f]"
       >
         <Link
           href="/"
-          className="text-lg font-medium hover:text-[#c57758] transition-colors"
+          className="text-base md:text-lg font-medium hover:text-[#c57758] transition-colors"
         >
           Главная
         </Link>
         <Link
           href="/feed"
-          className="text-lg font-medium hover:text-[#c57758] transition-colors"
+          className="text-base md:text-lg font-medium hover:text-[#c57758] transition-colors"
         >
           Лента
         </Link>
         {hasToken ? (
           <Link
             href="/profile"
-            className="text-lg font-medium hover:text-[#c57758] transition-colors"
+            className="text-base md:text-lg font-medium hover:text-[#c57758] transition-colors"
           >
             Профиль
           </Link>
         ) : (
           <Link
             href="/login"
-            className="text-lg font-medium hover:text-[#c57758] transition-colors"
+            className="text-base md:text-lg font-medium hover:text-[#c57758] transition-colors"
           >
             Войти
           </Link>

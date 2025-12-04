@@ -175,12 +175,12 @@ export default function FeedPage() {
           </p>
         </header>
 
-        <div className="flex flex-wrap justify-center gap-3 mb-10">
+        <div className="flex flex-nowrap md:flex-wrap overflow-x-auto md:overflow-visible justify-start md:justify-center gap-3 mb-10 pb-4 md:pb-0 px-2 md:px-0 scrollbar-hide">
           {filters.map((filter) => (
             <button
               key={filter.key}
               onClick={() => setActive(filter.key)}
-              className={`px-4 py-2 rounded-lg border-2 border-[#d2a06f] bg-[#fff9eb] text-sm md:text-base font-medium transition-all duration-200 shadow-[0_3px_0_#c99063,0_4px_6px_rgba(0,0,0,0.15)]
+              className={`flex-shrink-0 px-4 py-2 rounded-lg border-2 border-[#d2a06f] bg-[#fff9eb] text-sm md:text-base font-medium transition-all duration-200 shadow-[0_3px_0_#c99063,0_4px_6px_rgba(0,0,0,0.15)]
               ${active === filter.key ? "scale-105 bg-[#f2e3bf]" : "opacity-85 hover:opacity-100 hover:-translate-y-0.5"}`}
             >
               {filter.label}

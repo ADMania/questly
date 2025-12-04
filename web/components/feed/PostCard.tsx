@@ -195,29 +195,14 @@ export default function PostCard({ post, onDelete, readOnly = false }: PostCardP
     const publishedAt = formatPostDate(post.createdAt);
 
     return (
-        <article className="w-full max-w-5xl mx-auto mb-12">
-            <div className="flex flex-col lg:flex-row gap-8 items-start">
-                {/* Left Column: Card */}
-                <div className="flex-shrink-0 mx-auto lg:mx-0">
-                    <div className="origin-top-left scale-[0.85] sm:scale-100">
-                        <AdventureCard
-                            quest={{
-                                quest: post.card.quest,
-                                category: post.card.categoryLabel,
-                                difficulty: post.card.difficulty,
-                                symbolSeed: post.card.symbolSeed || String(post.id),
-                            }}
-                            isClosing={false}
-                        />
-                    </div>
-                </div>
-
-                {/* Right Column: Content */}
-                <div className="flex-1 min-w-0 w-full">
-                    {/* Author Header */}
-                    <div className="flex items-center justify-between mb-6">
-                        <div className="flex items-center gap-4">
-                            <div className="w-14 h-14 rounded-full border-2 border-[#d2a06f] bg-[#f2e3bf] overflow-hidden flex-shrink-0">
+        <article className="w-full max-w-2xl mx-auto mb-12">
+            <div className="relative rounded-2xl border-2 border-[#d2a06f] bg-[#fff9eb] p-6 shadow-[0_4px_0_#c99063] flex flex-col gap-6">
+                {/* 1. Author & Content Header */}
+                <div>
+                    {/* Author Info */}
+                    <div className="flex items-center justify-between mb-4 border-b border-[#d2a06f]/20 pb-4">
+                        <div className="flex items-center gap-3">
+                            <div className="w-12 h-12 rounded-full border-2 border-[#d2a06f] bg-[#f2e3bf] overflow-hidden flex-shrink-0">
                                 {post.author.avatarUrl ? (
                                     <img
                                         src={post.author.avatarUrl}
@@ -225,14 +210,14 @@ export default function PostCard({ post, onDelete, readOnly = false }: PostCardP
                                         className="w-full h-full object-cover"
                                     />
                                 ) : (
-                                    <div className="w-full h-full flex items-center justify-center text-xl font-bold text-[#c57758]">
+                                    <div className="w-full h-full flex items-center justify-center text-lg font-bold text-[#c57758]">
                                         {post.author.username.slice(0, 1).toUpperCase()}
                                     </div>
                                 )}
                             </div>
                             <div>
-                                <h3 className="text-lg font-bold text-[#3c2415]">{post.author.username}</h3>
-                                {publishedAt && <p className="text-sm text-[#5e4632]/70">{publishedAt}</p>}
+                                <h3 className="text-base font-bold text-[#3c2415]">{post.author.username}</h3>
+                                {publishedAt && <p className="text-xs text-[#5e4632]/70">{publishedAt}</p>}
                             </div>
                         </div>
 
@@ -251,132 +236,144 @@ export default function PostCard({ post, onDelete, readOnly = false }: PostCardP
                         )}
                     </div>
 
-                    {/* Post Content */}
-                    <div className="relative rounded-2xl border-2 border-[#d2a06f] bg-[#fff9eb] p-6 shadow-[0_4px_0_#c99063]">
-                        <div className="absolute top-6 -left-[18px] w-0 h-0 border-t-[10px] border-t-transparent border-r-[18px] border-r-[#d2a06f] border-b-[10px] border-b-transparent hidden lg:block" />
-                        <div className="absolute top-6 -left-[15px] w-0 h-0 border-t-[7px] border-t-transparent border-r-[15px] border-r-[#fff9eb] border-b-[7px] border-b-transparent hidden lg:block" />
-
-                        <h2 className="text-xl font-extrabold text-[#d26d75] mb-3">{post.title}</h2>
+                    {/* Post Text */}
+                    <div className="bg-[#fffdf5] rounded-xl border border-[#d2a06f]/30 p-4 shadow-sm">
+                        <h2 className="text-xl font-extrabold text-[#d26d75] mb-2">{post.title}</h2>
                         <p className="text-[#5e4632] leading-relaxed whitespace-pre-line">{post.content}</p>
                     </div>
+                </div>
 
-                    {/* Actions & Comments */}
-                    <div className="mt-6">
-                        <div className="flex flex-col sm:flex-row items-center justify-between gap-4">
-                            {/* Voting */}
-                            <div className={`flex items-center gap-2 rounded-xl border-2 border-[#d2a06f]/50 bg-white/60 p-1.5 ${readOnly ? 'opacity-80' : ''}`}>
-                                {!readOnly && (
-                                    <button
-                                        onClick={() => handleVote("up")}
-                                        disabled={isVoting}
-                                        className={`p-2 rounded-lg transition-all ${userVote === "up"
-                                            ? "bg-[#8ab58a] text-white shadow-sm"
-                                            : "hover:bg-[#8ab58a]/20 text-[#5e4632]"
-                                            }`}
-                                    >
-                                        <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-                                            <path d="m18 15-6-6-6 6" />
-                                        </svg>
-                                    </button>
-                                )}
-                                <span className={`font-bold min-w-[24px] text-center px-2 ${userVote === "up" ? "text-[#6a956a]" : userVote === "down" ? "text-[#d06767]" : "text-[#5e4632]"
-                                    }`}>
-                                    {votes > 0 ? `+${votes}` : votes}
-                                </span>
-                                {!readOnly && (
-                                    <button
-                                        onClick={() => handleVote("down")}
-                                        disabled={isVoting}
-                                        className={`p-2 rounded-lg transition-all ${userVote === "down"
-                                            ? "bg-[#d06767] text-white shadow-sm"
-                                            : "hover:bg-[#d06767]/20 text-[#5e4632]"
-                                            }`}
-                                    >
-                                        <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-                                            <path d="m6 9 6 6 6-6" />
-                                        </svg>
-                                    </button>
-                                )}
-                            </div>
+                {/* 2. Card (Centered) */}
+                <div className="flex justify-center -my-2">
+                    <div className="origin-center scale-[0.85] sm:scale-100">
+                        <AdventureCard
+                            quest={{
+                                quest: post.card.quest,
+                                category: post.card.categoryLabel,
+                                difficulty: post.card.difficulty,
+                                symbolSeed: post.card.symbolSeed || String(post.id),
+                            }}
+                            isClosing={false}
+                        />
+                    </div>
+                </div>
 
-                            {/* Comments Toggle */}
-                            <button
-                                onClick={toggleComments}
-                                className="flex-1 w-full sm:w-auto h-12 rounded-xl border-2 border-[#d2a06f]/40 bg-[#fff9eb]/50 hover:bg-[#fff9eb] hover:border-[#d2a06f] transition-all flex items-center justify-center px-4 text-sm font-semibold text-[#5e4632]"
-                            >
-                                {showComments ? "Скрыть комментарии" : "Показать комментарии"}
-                            </button>
+                {/* 3. Actions & Comments */}
+                <div>
+                    <div className="flex flex-col sm:flex-row items-center justify-between gap-4 pt-4 border-t border-[#d2a06f]/20">
+                        {/* Voting */}
+                        <div className={`flex items-center gap-2 rounded-xl border-2 border-[#d2a06f]/50 bg-white/60 p-1.5 ${readOnly ? 'opacity-80' : ''}`}>
+                            {!readOnly && (
+                                <button
+                                    onClick={() => handleVote("up")}
+                                    disabled={isVoting}
+                                    className={`p-2 rounded-lg transition-all ${userVote === "up"
+                                        ? "bg-[#8ab58a] text-white shadow-sm"
+                                        : "hover:bg-[#8ab58a]/20 text-[#5e4632]"
+                                        }`}
+                                >
+                                    <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                                        <path d="m18 15-6-6-6 6" />
+                                    </svg>
+                                </button>
+                            )}
+                            <span className={`font-bold min-w-[24px] text-center px-2 ${userVote === "up" ? "text-[#6a956a]" : userVote === "down" ? "text-[#d06767]" : "text-[#5e4632]"
+                                }`}>
+                                {votes > 0 ? `+${votes}` : votes}
+                            </span>
+                            {!readOnly && (
+                                <button
+                                    onClick={() => handleVote("down")}
+                                    disabled={isVoting}
+                                    className={`p-2 rounded-lg transition-all ${userVote === "down"
+                                        ? "bg-[#d06767] text-white shadow-sm"
+                                        : "hover:bg-[#d06767]/20 text-[#5e4632]"
+                                        }`}
+                                >
+                                    <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                                        <path d="m6 9 6 6 6-6" />
+                                    </svg>
+                                </button>
+                            )}
                         </div>
 
-                        {/* Comments Section */}
-                        {showComments && (
-                            <div className="mt-6 space-y-6 pl-2 sm:pl-0">
-                                {/* Comment Form */}
-                                <form onSubmit={handlePostComment} className="flex gap-3">
-                                    <input
-                                        type="text"
-                                        value={commentText}
-                                        onChange={(e) => setCommentText(e.target.value)}
-                                        placeholder="Написать комментарий..."
-                                        className="flex-1 rounded-xl border-2 border-[#d2a06f]/30 bg-white/80 px-4 py-2.5 text-sm text-[#3c2415] placeholder:text-[#5e4632]/40 focus:border-[#d2a06f] focus:outline-none focus:ring-0"
-                                    />
-                                    <button
-                                        type="submit"
-                                        disabled={isPostingComment || !commentText.trim()}
-                                        className="rounded-xl bg-[#d2a06f] px-4 py-2.5 font-bold text-white transition hover:bg-[#c59060] disabled:opacity-50 disabled:cursor-not-allowed"
-                                    >
-                                        {isPostingComment ? "..." : "➤"}
-                                    </button>
-                                </form>
-
-                                {/* Comments List */}
-                                <div className="space-y-3 max-h-80 overflow-y-auto pr-2 custom-scrollbar">
-                                    {isLoadingComments ? (
-                                        <div className="text-center text-sm text-[#5e4632]/60 py-4">Загрузка комментариев...</div>
-                                    ) : comments.length > 0 ? (
-                                        comments.map((comment) => (
-                                            <div key={comment.id} className="relative bg-[#fff9eb] rounded-xl p-4 border-2 border-[#d2a06f]/20 shadow-sm hover:border-[#d2a06f]/40 transition-colors">
-                                                <div className="absolute top-3 left-0 w-1 h-full rounded-r-full" />
-
-                                                <div className="flex items-center gap-2 mb-2">
-                                                    <div className="w-6 h-6 rounded-full border border-[#d2a06f] bg-[#f2e3bf] overflow-hidden flex-shrink-0">
-                                                        {comment.author?.avatar?.url ? (
-                                                            <img
-                                                                src={`${process.env.NEXT_PUBLIC_STRAPI_URL}${comment.author.avatar.url}`}
-                                                                alt={comment.author.username}
-                                                                className="w-full h-full object-cover"
-                                                            />
-                                                        ) : (
-                                                            <div className="w-full h-full flex items-center justify-center text-[10px] font-bold text-[#c57758]">
-                                                                {comment.author?.username?.slice(0, 1).toUpperCase() ?? "?"}
-                                                            </div>
-                                                        )}
-                                                    </div>
-                                                    <span className="font-bold text-xs text-[#3c2415]">
-                                                        {comment.author?.username || "Неизвестный путник"}
-                                                    </span>
-                                                </div>
-
-                                                <p className="text-[#5e4632] text-sm leading-relaxed pl-2">{comment.content}</p>
-                                                <div className="mt-2 text-[10px] uppercase tracking-wider font-bold text-[#d2a06f] text-right">
-                                                    {new Date(comment.createdAt).toLocaleDateString("ru-RU", {
-                                                        day: "numeric",
-                                                        month: "long",
-                                                        hour: "2-digit",
-                                                        minute: "2-digit"
-                                                    })}
-                                                </div>
-                                            </div>
-                                        ))
-                                    ) : (
-                                        <div className="text-center text-sm text-[#5e4632]/40 py-4 italic bg-[#fff9eb]/30 rounded-xl border border-dashed border-[#d2a06f]/20">
-                                            Тишина... Будьте первым, кто нарушит её!
-                                        </div>
-                                    )}
-                                </div>
-                            </div>
-                        )}
+                        {/* Comments Toggle */}
+                        <button
+                            onClick={toggleComments}
+                            className="flex-1 w-full sm:w-auto h-12 rounded-xl border-2 border-[#d2a06f]/40 bg-[#fff9eb]/50 hover:bg-[#fff9eb] hover:border-[#d2a06f] transition-all flex items-center justify-center px-4 text-sm font-semibold text-[#5e4632]"
+                        >
+                            {showComments ? "Скрыть комментарии" : "Показать комментарии"}
+                        </button>
                     </div>
+
+                    {/* Comments Section */}
+                    {showComments && (
+                        <div className="mt-6 space-y-6">
+                            {/* Comment Form */}
+                            <form onSubmit={handlePostComment} className="flex gap-3">
+                                <input
+                                    type="text"
+                                    value={commentText}
+                                    onChange={(e) => setCommentText(e.target.value)}
+                                    placeholder="Написать комментарий..."
+                                    className="flex-1 rounded-xl border-2 border-[#d2a06f]/30 bg-white/80 px-4 py-2.5 text-sm text-[#3c2415] placeholder:text-[#5e4632]/40 focus:border-[#d2a06f] focus:outline-none focus:ring-0"
+                                />
+                                <button
+                                    type="submit"
+                                    disabled={isPostingComment || !commentText.trim()}
+                                    className="rounded-xl bg-[#d2a06f] px-4 py-2.5 font-bold text-white transition hover:bg-[#c59060] disabled:opacity-50 disabled:cursor-not-allowed"
+                                >
+                                    {isPostingComment ? "..." : "➤"}
+                                </button>
+                            </form>
+
+                            {/* Comments List */}
+                            <div className="space-y-3 max-h-80 overflow-y-auto pr-2 custom-scrollbar">
+                                {isLoadingComments ? (
+                                    <div className="text-center text-sm text-[#5e4632]/60 py-4">Загрузка комментариев...</div>
+                                ) : comments.length > 0 ? (
+                                    comments.map((comment) => (
+                                        <div key={comment.id} className="relative bg-[#fff9eb] rounded-xl p-4 border-2 border-[#d2a06f]/20 shadow-sm hover:border-[#d2a06f]/40 transition-colors">
+                                            <div className="absolute top-3 left-0 w-1 h-full rounded-r-full" />
+
+                                            <div className="flex items-center gap-2 mb-2">
+                                                <div className="w-6 h-6 rounded-full border border-[#d2a06f] bg-[#f2e3bf] overflow-hidden flex-shrink-0">
+                                                    {comment.author?.avatar?.url ? (
+                                                        <img
+                                                            src={`${process.env.NEXT_PUBLIC_STRAPI_URL}${comment.author.avatar.url}`}
+                                                            alt={comment.author.username}
+                                                            className="w-full h-full object-cover"
+                                                        />
+                                                    ) : (
+                                                        <div className="w-full h-full flex items-center justify-center text-[10px] font-bold text-[#c57758]">
+                                                            {comment.author?.username?.slice(0, 1).toUpperCase() ?? "?"}
+                                                        </div>
+                                                    )}
+                                                </div>
+                                                <span className="font-bold text-xs text-[#3c2415]">
+                                                    {comment.author?.username || "Неизвестный путник"}
+                                                </span>
+                                            </div>
+
+                                            <p className="text-[#5e4632] text-sm leading-relaxed pl-2">{comment.content}</p>
+                                            <div className="mt-2 text-[10px] uppercase tracking-wider font-bold text-[#d2a06f] text-right">
+                                                {new Date(comment.createdAt).toLocaleDateString("ru-RU", {
+                                                    day: "numeric",
+                                                    month: "long",
+                                                    hour: "2-digit",
+                                                    minute: "2-digit"
+                                                })}
+                                            </div>
+                                        </div>
+                                    ))
+                                ) : (
+                                    <div className="text-center text-sm text-[#5e4632]/40 py-4 italic bg-[#fff9eb]/30 rounded-xl border border-dashed border-[#d2a06f]/20">
+                                        Тишина... Будьте первым, кто нарушит её!
+                                    </div>
+                                )}
+                            </div>
+                        </div>
+                    )}
                 </div>
             </div>
         </article>

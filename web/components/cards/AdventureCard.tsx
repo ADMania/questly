@@ -50,8 +50,8 @@ export default function AdventureCard({ quest, isClosing }: AdventureCardProps) 
     normalizedDifficulty === "easy"
       ? "Лёгкое"
       : normalizedDifficulty === "medium"
-      ? "Среднее"
-      : "Тяжёлое";
+        ? "Среднее"
+        : "Тяжёлое";
 
   const categoryLabel = quest.category;
   const difficultyTitle = `${difficultyLabel} приключение`;
@@ -145,3 +145,4 @@ export default function AdventureCard({ quest, isClosing }: AdventureCardProps) 
     </AnimatePresence>
   );
 }
+

@@ -781,9 +781,9 @@ export default function ProfilePage() {
       <section className="relative z-10 w-full max-w-5xl pt-8 md:pt-12">
         {/* 🧠 Шапка профиля */}
         <header className="rounded-2xl border-2 border-[#d2a06f] bg-[#fff9eb] shadow-[0_4px_0_#c99063,0_6px_8px_rgba(0,0,0,0.15)] p-6 md:p-8 mb-4">
-          <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
-            <div className="flex items-center gap-5 md:gap-6">
-              <div className="w-20 h-20 md:w-32 md:h-32 rounded-full bg-[#f2e3bf] border-2 border-[#d2a06f] overflow-hidden">
+          <div className="flex flex-col gap-6 md:flex-row md:items-center md:justify-between">
+            <div className="flex flex-col md:flex-row items-center gap-5 md:gap-6 text-center md:text-left">
+              <div className="w-24 h-24 md:w-32 md:h-32 rounded-full bg-[#f2e3bf] border-2 border-[#d2a06f] overflow-hidden shrink-0">
                 {user.avatar?.url && (
                   <img
                     src={`${api}${user.avatar.url}`}
@@ -794,24 +794,18 @@ export default function ProfilePage() {
               </div>
               <div className="flex-1 min-w-0">
                 <h1
-                  className="text-3xl md:text-4xl font-extrabold truncate"
+                  className="text-3xl md:text-4xl font-extrabold truncate max-w-[200px] md:max-w-md mx-auto md:mx-0"
                   style={{ color: "#d26d75", textShadow: "0 2px 3px rgba(0,0,0,0.15)" }}
                 >
                   {user.username}
                 </h1>
-                <div className="mt-4 grid grid-cols-3 gap-3 max-w-md text-center">
-                  <div className="rounded-xl border-2 border-[#d2a06f] bg-white/80 py-2 shadow-[0_2px_0_#c99063]">
-                    <div className="text-xl font-bold">{cardsTotal}</div>
-                    <div className="text-xs text-[#5e4632]">квестов</div>
-                  </div>
-                  <div className="rounded-xl border-2 border-[#d2a06f] bg-white/80 py-2 shadow-[0_2px_0_#c99063]">
-                    <div className="text-xl font-bold">{posts.length}</div>
-                    <div className="text-xs text-[#5e4632]">постов</div>
-                  </div>
-                </div>
+                <p className="text-[#5e4632]/80 font-medium mt-1">
+                  Искатель приключений
+                </p>
               </div>
             </div>
-            <div className="flex gap-2">
+
+            <div className="flex justify-center md:justify-end gap-2">
               <button
                 type="button"
                 onClick={() => setIsFeedbackOpen(true)}
@@ -832,7 +826,7 @@ export default function ProfilePage() {
               <button
                 type="button"
                 onClick={handleLogout}
-                className="px-4 py-2 rounded-xl border-2 border-[#d2a06f] bg-[#d26d75] text-[#fff9eb] text-sm font-semibold shadow-[0_3px_0_#a9565d] transition hover:-translate-y-0.5 hover:shadow-[0_5px_0_#a9565d]"
+                className="px-4 py-2 rounded-xl border-2 border-[#d2a06f] bg-[#fff9eb] text-[#4a2c1f] text-sm font-semibold shadow-[0_3px_0_#c99063] transition hover:-translate-y-0.5 hover:shadow-[0_5px_0_#c99063]"
               >
                 Выйти
               </button>
@@ -856,114 +850,126 @@ export default function ProfilePage() {
 
         {/* 🧾 Контент */}
         {active === "quests" && (
-          <>
+          <div className="animate-fadeIn">
             {cardsError && (
               <div className="mb-4 rounded-xl border-2 border-[#e28b82] bg-[#fde7e5] px-4 py-3 text-sm text-[#b73d3d]">
                 {cardsError}
               </div>
             )}
 
-            <div className="flex flex-col gap-8">
-              {isCardsLoading ? (
-                <div className="py-12 text-center text-[#5e4632]/70">Загрузка квестов...</div>
-              ) : cards.length > 0 ? (
-                <>
-                  <div className="grid justify-items-center gap-8 sm:grid-cols-2 xl:grid-cols-3">
-                    {cards.map((card) => (
-                      <div key={card.id} className="flex w-full flex-col items-center">
-                        <div className="relative transition-transform duration-300 ease-out hover:scale-105 hover:z-20 pointer-events-none">
-                          <div className="origin-top scale-[0.72] sm:scale-[0.78] md:scale-[0.84] lg:scale-[0.9] pointer-events-auto">
-                            <AdventureCard
-                              quest={{
-                                quest: card.quest_text,
-                                category: card.primaryCategory,
-                                difficulty: card.difficulty,
-                                symbolSeed: card.symbol_seed,
-                              }}
-                              isClosing={false}
-                            />
-                          </div>
-                        </div>
-                        <div className="flex w-full flex-col items-center -mt-28 sm:-mt-24 md:-mt-16 lg:-mt-10 z-10">
-                          {card.categories.length > 1 && (
-                            <div className="mb-2 w-full max-w-[300px] text-center text-xs text-[#5e4632]/70">
-                              {card.categories.join(", ")}
-                            </div>
-                          )}
-                          <div className="w-full max-w-[320px]">
-                            <motion.button
-                              type="button"
-                              initial={{ opacity: 0, scale: 0.8 }}
-                              animate={{ opacity: 1, scale: 1 }}
-                              transition={{ duration: 0.4, delay: 0.1 }}
-                              onClick={() => openPostComposer(card)}
-                              disabled={Boolean(card.postId)}
-                              className="w-full rounded-xl border-2 border-[#d2a06f] bg-[#fff9eb] px-4 py-2 text-sm font-semibold text-[#4a2c1f] shadow-[0_3px_0_#c99063] transition hover:-translate-y-0.5 hover:shadow-[0_5px_0_#c99063] disabled:cursor-not-allowed disabled:bg-transparent disabled:border-dashed disabled:border-[#d2a06f]/40 disabled:text-[#5e4632]/60 disabled:shadow-none disabled:translate-y-0"
-                            >
-                              {card.postId ? "Пост опубликован" : "Поделиться в ленте"}
-                            </motion.button>
-                            {card.postId && (
-                              <p className="mt-1 text-center text-xs text-[#5e4632]/70">Вы уже поделились этим приключением.</p>
-                            )}
-                          </div>
-                        </div>
+            {isCardsLoading ? (
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                {Array.from({ length: 3 }).map((_, i) => (
+                  <div key={i} className="h-64 rounded-2xl bg-[#d2a06f]/20 animate-pulse" />
+                ))}
+              </div>
+            ) : cards.length > 0 ? (
+              <>
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                  {cards.map((card, index) => (
+                    <motion.div
+                      layout
+                      initial={{ opacity: 0, y: 20 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      whileHover={{ scale: 1.05, zIndex: 100 }}
+                      exit={{ opacity: 0, scale: 0.9 }}
+                      transition={{ duration: 0.3, delay: index * 0.05 }}
+                      key={card.id}
+                      className="flex flex-col items-center gap-4 relative"
+                      style={{ zIndex: cards.length - index }}
+                    >
+                      <div className="flex justify-center">
+                        <AdventureCard
+                          quest={{
+                            quest: card.quest_text,
+                            category: card.primaryCategory,
+                            difficulty:
+                              card.difficulty === "easy"
+                                ? "Л"
+                                : card.difficulty === "hard"
+                                  ? "Т"
+                                  : "С",
+                            symbolSeed: card.symbol_seed,
+                          }}
+                          isClosing={false}
+                        />
                       </div>
-                    ))}
-                  </div>
-
-                  {/* Пагинация */}
-                  {totalPages > 1 && (
-                    <div className="mt-8 flex justify-center gap-2">
-                      <button
-                        onClick={() => handlePageChange(cardsPage - 1)}
-                        disabled={cardsPage === 1}
-                        className="rounded-lg border-2 border-[#d2a06f] bg-[#fff9eb] px-4 py-2 font-semibold text-[#4a2c1f] shadow-[0_2px_0_#c99063] disabled:opacity-50 disabled:shadow-none"
-                      >
-                        ←
-                      </button>
-                      <span className="flex items-center px-4 font-bold text-[#3c2415]">
-                        {cardsPage} / {totalPages}
-                      </span>
-                      <button
-                        onClick={() => handlePageChange(cardsPage + 1)}
-                        disabled={cardsPage === totalPages}
-                        className="rounded-lg border-2 border-[#d2a06f] bg-[#fff9eb] px-4 py-2 font-semibold text-[#4a2c1f] shadow-[0_2px_0_#c99063] disabled:opacity-50 disabled:shadow-none"
-                      >
-                        →
-                      </button>
-                    </div>
-                  )}
-                </>
-              ) : (
-                <div className="col-span-full flex flex-col items-center justify-center py-12 text-center text-[#5e4632]/70 min-h-[220px]">
-                  <p>У вас пока нет карточек. Получите первую, чтобы начать приключение!</p>
+                      {card.postId ? (
+                        <div className="w-full max-w-[300px] text-center text-sm font-medium text-[#c57758] py-2 bg-[#fff9eb]/80 rounded-lg border border-[#d2a06f]/30">
+                          Опубликовано
+                        </div>
+                      ) : (
+                        <button
+                          onClick={() => openPostComposer(card)}
+                          className="w-full max-w-[300px] py-2 rounded-lg bg-[#d26d75] text-[#fff9eb] text-sm font-bold shadow-[0_3px_0_#a9565d] hover:-translate-y-0.5 hover:shadow-[0_5px_0_#a9565d] transition-all"
+                        >
+                          Рассказать историю
+                        </button>
+                      )}
+                    </motion.div>
+                  ))}
                 </div>
-              )}
-            </div>
-          </>
-        )}
 
-        {active === "activity" && (
-          <>
-            {postsError && (
-              <div className="mb-4 rounded-xl border-2 border-[#e28b82] bg-[#fde7e5] px-4 py-3 text-sm text-[#b73d3d]">
-                {postsError}
+                {/* Пагинация */}
+                {totalPages > 1 && (
+                  <div className="mt-8 flex justify-center gap-2">
+                    <button
+                      onClick={() => handlePageChange(cardsPage - 1)}
+                      disabled={cardsPage === 1}
+                      className="rounded-lg border-2 border-[#d2a06f] bg-[#fff9eb] px-4 py-2 font-semibold text-[#4a2c1f] shadow-[0_2px_0_#c99063] disabled:opacity-50 disabled:shadow-none"
+                    >
+                      ←
+                    </button>
+                    <span className="flex items-center px-4 font-bold text-[#3c2415]">
+                      {cardsPage} / {totalPages}
+                    </span>
+                    <button
+                      onClick={() => handlePageChange(cardsPage + 1)}
+                      disabled={cardsPage === totalPages}
+                      className="rounded-lg border-2 border-[#d2a06f] bg-[#fff9eb] px-4 py-2 font-semibold text-[#4a2c1f] shadow-[0_2px_0_#c99063] disabled:opacity-50 disabled:shadow-none"
+                    >
+                      →
+                    </button>
+                  </div>
+                )}
+              </>
+            ) : (
+              <div className="flex flex-col items-center justify-center py-12 text-center text-[#5e4632]/70 min-h-[220px]">
+                <p className="text-lg">У вас пока нет сохранённых карточек.</p>
+                <button
+                  onClick={() => router.push("/")}
+                  className="mt-4 text-[#d26d75] font-bold hover:underline"
+                >
+                  Найти приключение
+                </button>
               </div>
             )}
-            <div className="space-y-4">
-              {posts.length > 0 ? (
-                posts.map((post) => (
-                  <PostCard key={post.id} post={post} onDelete={initiateDeletePost} readOnly={true} />
-                ))
-              ) : (
-                <div className="flex flex-col items-center justify-center py-12 text-center text-[#5e4632]/70 min-h-[220px]">
-                  <p>Пока нет активности. Поделитесь приключением, чтобы оживить ленту!</p>
+          </div>
+        )}
+
+        {
+          active === "activity" && (
+            <>
+              {postsError && (
+                <div className="mb-4 rounded-xl border-2 border-[#e28b82] bg-[#fde7e5] px-4 py-3 text-sm text-[#b73d3d]">
+                  {postsError}
                 </div>
               )}
-            </div>
-          </>
-        )}
-      </section>
+              <div className="space-y-4">
+                {posts.length > 0 ? (
+                  posts.map((post) => (
+                    <PostCard key={post.id} post={post} onDelete={initiateDeletePost} readOnly={true} />
+                  ))
+                ) : (
+                  <div className="flex flex-col items-center justify-center py-12 text-center text-[#5e4632]/70 min-h-[220px]">
+                    <p>Пока нет активности. Поделитесь приключением, чтобы оживить ленту!</p>
+                  </div>
+                )}
+              </div>
+            </>
+          )
+        }
+      </section >
 
       {cardForPost && (
         <PostComposerModal
@@ -981,22 +987,26 @@ export default function ProfilePage() {
         />
       )}
 
-      {isEditingProfile && user && (
-        <ProfileEditModal
-          user={user}
-          apiBase={api}
-          isSubmitting={isUpdatingProfile}
-          onClose={() => setIsEditingProfile(false)}
-          onSubmit={handleUpdateProfile}
-        />
-      )}
+      {
+        isEditingProfile && user && (
+          <ProfileEditModal
+            user={user}
+            apiBase={api}
+            isSubmitting={isUpdatingProfile}
+            onClose={() => setIsEditingProfile(false)}
+            onSubmit={handleUpdateProfile}
+          />
+        )
+      }
 
-      {isFeedbackOpen && (
-        <FeedbackModal
-          onClose={() => setIsFeedbackOpen(false)}
-          context="/profile"
-        />
-      )}
+      {
+        isFeedbackOpen && (
+          <FeedbackModal
+            onClose={() => setIsFeedbackOpen(false)}
+            context="/profile"
+          />
+        )
+      }
 
       <DeleteConfirmationModal
         isOpen={Boolean(postToDelete)}
@@ -1004,6 +1014,6 @@ export default function ProfilePage() {
         onClose={cancelDeletePost}
         onConfirm={confirmDeletePost}
       />
-    </main>
+    </main >
   );
 }

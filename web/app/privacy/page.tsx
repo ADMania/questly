@@ -5,8 +5,8 @@ export default function PrivacyPage() {
         <main className="relative min-h-screen flex flex-col items-center text-[#3c2415] px-6 py-12">
             <BackgroundGrid />
 
-            <div className="relative z-10 w-full max-w-4xl bg-[#fff9eb] border-2 border-[#d2a06f] rounded-xl p-8 md:p-12 shadow-[0_6px_0_#c99063,0_14px_24px_rgba(0,0,0,0.18)]">
-                <h1 className="text-3xl md:text-4xl font-extrabold mb-8 text-[#d26d75]">
+            <div className="relative z-10 w-full max-w-4xl bg-[#fff9eb] border-2 border-[#d2a06f] rounded-xl p-6 md:p-12 shadow-[0_6px_0_#c99063,0_14px_24px_rgba(0,0,0,0.18)]">
+                <h1 className="text-2xl md:text-4xl font-extrabold mb-6 md:mb-8 text-[#d26d75] text-center md:text-left">
                     Политика конфиденциальности
                 </h1>
 
