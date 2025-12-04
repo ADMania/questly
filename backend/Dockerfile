@@ -38,10 +38,10 @@ COPY --from=builder /app/dist ./dist
 COPY --from=builder /app/public ./public
 COPY --from=builder /app/package.json ./package.json
 # Copy other necessary files like config, src (if needed for runtime), etc.
-# Strapi needs 'config' folder at runtime? 
-# For TS projects, compiled config is in dist/config. 
-# Copying source config might confuse Strapi if it finds .ts files.
-# COPY --from=builder /app/config ./config
+# Strapi needs 'config' folder at runtime
+# Copy compiled config from dist/config to ./config
+COPY --from=builder /app/dist/config ./config
+
 
 COPY --from=builder /app/src ./src
 COPY --from=builder /app/database ./database
