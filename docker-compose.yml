@@ -1,0 +1,67 @@
+version: '3'
+services:
+  questly-db:
+    image: postgres:15-alpine
+    restart: unless-stopped
+    env_file: .env.production
+    environment:
+      POSTGRES_USER: ${DATABASE_USERNAME}
+      POSTGRES_PASSWORD: ${DATABASE_PASSWORD}
+      POSTGRES_DB: ${DATABASE_NAME}
+    volumes:
+      - questly-db-data:/var/lib/postgresql/data
+    networks:
+      - questly-network
+
+  questly-backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    restart: unless-stopped
+    env_file: .env.production
+    environment:
+      DATABASE_CLIENT: postgres
+      DATABASE_HOST: questly-db
+      DATABASE_PORT: 5432
+      DATABASE_NAME: ${DATABASE_NAME}
+      DATABASE_USERNAME: ${DATABASE_USERNAME}
+      DATABASE_PASSWORD: ${DATABASE_PASSWORD}
+      DATABASE_SSL: ${DATABASE_SSL}
+      JWT_SECRET: ${JWT_SECRET}
+      ADMIN_JWT_SECRET: ${ADMIN_JWT_SECRET}
+      APP_KEYS: ${APP_KEYS}
+      API_TOKEN_SALT: ${API_TOKEN_SALT}
+      TRANSFER_TOKEN_SALT: ${TRANSFER_TOKEN_SALT}
+      NODE_ENV: production
+    volumes:
+      - ./backend/config:/app/config
+      - ./backend/public/uploads:/app/public/uploads
+    depends_on:
+      - questly-db
+    networks:
+      - questly-network
+    ports:
+      - "1337:1337"
+
+  questly-web:
+    build:
+      context: ./web
+      dockerfile: Dockerfile
+    restart: unless-stopped
+    env_file: .env.production
+    environment:
+      NEXT_PUBLIC_STRAPI_URL: ${NEXT_PUBLIC_STRAPI_URL}
+      NODE_ENV: production
+    depends_on:
+      - questly-backend
+    networks:
+      - questly-network
+    ports:
+      - "3000:3000"
+
+volumes:
+  questly-db-data:
+
+networks:
+  questly-network:
+    driver: bridge

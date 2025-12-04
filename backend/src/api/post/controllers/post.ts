@@ -299,8 +299,6 @@ export default factories.createCoreController('api::post.post', ({ strapi }) => 
         populate: ['upvoted_by', 'downvoted_by'],
       });
 
-      strapi.log.info(`Vote: found post via documents.findOne? ${!!post} (docId=${post?.documentId})`);
-
       if (!post) {
         // Debug: list recent posts to see what IDs exist
         const recentPosts = await strapi.db.query('api::post.post').findMany({
@@ -308,8 +306,6 @@ export default factories.createCoreController('api::post.post', ({ strapi }) => 
           limit: 5,
           select: ['id', 'documentId', 'title'],
         });
-        strapi.log.info(`Vote: Post ${id} not found. Recent posts: ${JSON.stringify(recentPosts)}`);
-
         return ctx.notFound('Post not found');
       }
 
@@ -319,14 +315,11 @@ export default factories.createCoreController('api::post.post', ({ strapi }) => 
       });
 
       const userDocId = fullUser.documentId;
-      strapi.log.info(`Vote: fetched user docId: ${userDocId}`);
 
       const postAny = post as any;
       // Map to Document IDs
       const upvoters = (postAny.upvoted_by || []).map((u: any) => u.documentId).filter(Boolean);
       const downvoters = (postAny.downvoted_by || []).map((u: any) => u.documentId).filter(Boolean);
-
-      strapi.log.info(`Vote: existing upvoters (docIds): ${JSON.stringify(upvoters)}`);
 
       const isUpvoted = upvoters.includes(userDocId);
       const isDownvoted = downvoters.includes(userDocId);
@@ -350,8 +343,6 @@ export default factories.createCoreController('api::post.post', ({ strapi }) => 
         }
       }
 
-      strapi.log.info(`Vote: new upvoters: ${JSON.stringify(newUpvoters)}`);
-
       const newVoteCount = newUpvoters.length - newDownvoters.length;
 
       // Use strapi.documents to update
@@ -364,8 +355,6 @@ export default factories.createCoreController('api::post.post', ({ strapi }) => 
         },
         status: 'published', // Important for draft/publish system
       });
-
-      strapi.log.info(`Vote: updated successfully. New votes: ${updatedPost.votes}`);
 
       // Determine new user vote status
       let userVoteStatus = null;
