@@ -20,6 +20,8 @@ COPY . .
 
 # Build Strapi Admin
 ENV NODE_ENV=production
+# Increase memory limit for build process (helps prevents hangs on small VPS)
+ENV NODE_OPTIONS="--max-old-space-size=4096"
 RUN npm run build
 
 # Production image, copy all the files and run next
