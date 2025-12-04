@@ -35,19 +35,8 @@ RUN adduser --system --uid 1001 strapi
 
 COPY --from=builder /app/node_modules ./node_modules
 COPY --from=builder /app/dist ./dist
-COPY --from=builder /app/public ./public
-COPY --from=builder /app/package.json ./package.json
-# Copy other necessary files like config, src (if needed for runtime), etc.
-# Strapi needs 'config' folder at runtime
-# Copy compiled config from dist/config to ./config
-COPY --from=builder /app/dist/config ./config
+# Copy all files including dist
+COPY --from=builder /app ./
 
-
-COPY --from=builder /app/src ./src
-COPY --from=builder /app/database ./database
-
-USER strapi
-
-EXPOSE 1337
-
+# Strapi start script will use the compiled files in dist
 CMD ["npm", "run", "start"]
