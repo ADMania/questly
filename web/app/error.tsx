@@ -1,6 +1,7 @@
 "use client";
 
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
+import FeedbackModal from "@/components/modals/FeedbackModal";
 import BackgroundGrid from "@/components/BackgroundGrid";
 
 export default function Error({
@@ -10,6 +11,8 @@ export default function Error({
     error: Error & { digest?: string };
     reset: () => void;
 }) {
+    const [isFeedbackOpen, setIsFeedbackOpen] = useState(false);
+
     useEffect(() => {
         console.error(error);
     }, [error]);
@@ -34,15 +37,28 @@ export default function Error({
                         >
                             Попробовать снова
                         </button>
+                        <button
+                            onClick={() => setIsFeedbackOpen(true)}
+                            className="w-full rounded-xl border-2 border-[#e28b82] bg-[#d26d75] px-6 py-3 text-lg font-semibold text-[#fff9eb] shadow-[0_4px_0_#a9565d] transition hover:-translate-y-0.5 hover:shadow-[0_6px_0_#a9565d]"
+                        >
+                            Сообщить об ошибке
+                        </button>
                         <a
                             href="/"
-                            className="w-full rounded-xl border-2 border-[#e28b82] bg-[#d26d75] px-6 py-3 text-lg font-semibold text-[#fff9eb] shadow-[0_4px_0_#a9565d] transition hover:-translate-y-0.5 hover:shadow-[0_6px_0_#a9565d]"
+                            className="w-full rounded-xl border-2 border-transparent hover:bg-[#fff9eb]/50 px-6 py-2 text-sm font-semibold text-[#d26d75] transition"
                         >
                             На главную
                         </a>
                     </div>
                 </div>
             </div>
+
+            {isFeedbackOpen && (
+                <FeedbackModal
+                    onClose={() => setIsFeedbackOpen(false)}
+                    context={`Segment Error: ${error.message} (${error.digest || 'no digest'})`}
+                />
+            )}
         </main>
     );
 }

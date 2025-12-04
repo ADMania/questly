@@ -2,8 +2,12 @@
 
 import Link from "next/link";
 import BackgroundGrid from "@/components/BackgroundGrid";
+import { useState } from "react";
+import FeedbackModal from "@/components/modals/FeedbackModal";
 
 export default function NotFound() {
+    const [isFeedbackOpen, setIsFeedbackOpen] = useState(false);
+
     return (
         <main className="relative min-h-screen flex flex-col items-center justify-center text-[#3c2415] px-6 overflow-hidden">
             <BackgroundGrid />
@@ -20,14 +24,29 @@ export default function NotFound() {
                         Похоже, это приключение завело вас куда-то не туда. Такой страницы не существует или она была перемещена.
                     </p>
 
-                    <Link
-                        href="/"
-                        className="inline-block w-full rounded-xl border-2 border-[#d2a06f] bg-[#d26d75] px-6 py-3 text-lg font-semibold text-[#fff9eb] shadow-[0_4px_0_#a9565d] transition hover:-translate-y-0.5 hover:shadow-[0_6px_0_#a9565d]"
-                    >
-                        Вернуться домой
-                    </Link>
+                    <div className="flex flex-col gap-3">
+                        <Link
+                            href="/"
+                            className="inline-block w-full rounded-xl border-2 border-[#d2a06f] bg-[#d26d75] px-6 py-3 text-lg font-semibold text-[#fff9eb] shadow-[0_4px_0_#a9565d] transition hover:-translate-y-0.5 hover:shadow-[0_6px_0_#a9565d]"
+                        >
+                            Вернуться домой
+                        </Link>
+                        <button
+                            onClick={() => setIsFeedbackOpen(true)}
+                            className="w-full rounded-xl border-2 border-[#d2a06f] bg-[#fff9eb] px-6 py-3 text-lg font-semibold text-[#4a2c1f] shadow-[0_4px_0_#c99063] transition hover:-translate-y-0.5 hover:shadow-[0_6px_0_#c99063]"
+                        >
+                            Сообщить об ошибке
+                        </button>
+                    </div>
                 </div>
             </div>
+
+            {isFeedbackOpen && (
+                <FeedbackModal
+                    onClose={() => setIsFeedbackOpen(false)}
+                    context="404 Not Found"
+                />
+            )}
         </main>
     );
 }

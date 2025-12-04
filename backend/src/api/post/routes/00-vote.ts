@@ -2,8 +2,8 @@ export default {
     routes: [
         {
             method: 'PUT',
-            path: '/posts/:id/vote',
-            handler: 'post.vote',
+            path: '/vote/:id',
+            handler: 'api::post.post.vote',
             config: {
                 policies: [],
                 middlewares: [],

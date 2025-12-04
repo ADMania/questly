@@ -2,7 +2,7 @@
 
 // TODO: Настроить вёрстку под телефоны
 
-import { useState } from "react";
+import { useState, useRef } from "react";
 import AdventureCard from "@/components/cards/AdventureCard";
 import { motion } from "framer-motion";
 
@@ -39,6 +39,7 @@ export default function PostCard({ post, onDelete, readOnly = false }: PostCardP
     const [votes, setVotes] = useState(parseInt(String(post.votes || 0)));
     const [userVote, setUserVote] = useState<"up" | "down" | null>(post.userVote || null);
     const [isVoting, setIsVoting] = useState(false);
+    const isVotingRef = useRef(false);
 
     // Comments state
     const [comments, setComments] = useState<any[]>([]);
@@ -48,7 +49,7 @@ export default function PostCard({ post, onDelete, readOnly = false }: PostCardP
     const [showComments, setShowComments] = useState(false);
 
     const handleVote = async (type: "up" | "down") => {
-        if (readOnly || isVoting) return;
+        if (readOnly || isVotingRef.current) return;
 
         const jwt = localStorage.getItem("jwt");
         if (!jwt) {
@@ -56,6 +57,7 @@ export default function PostCard({ post, onDelete, readOnly = false }: PostCardP
             return;
         }
 
+        isVotingRef.current = true;
         setIsVoting(true);
 
         // Optimistic update
@@ -85,7 +87,8 @@ export default function PostCard({ post, onDelete, readOnly = false }: PostCardP
         setUserVote(newUserVote);
 
         try {
-            const res = await fetch(`${process.env.NEXT_PUBLIC_STRAPI_URL}/api/posts/${post.id}/vote`, {
+            const voteId = post.documentId || post.id;
+            const res = await fetch(`${process.env.NEXT_PUBLIC_STRAPI_URL}/api/vote/${voteId}`, {
                 method: "PUT",
                 headers: {
                     "Content-Type": "application/json",
@@ -107,6 +110,7 @@ export default function PostCard({ post, onDelete, readOnly = false }: PostCardP
             setVotes(previousVotes);
             setUserVote(previousUserVote);
         } finally {
+            isVotingRef.current = false;
             setIsVoting(false);
         }
     };

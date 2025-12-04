@@ -277,6 +277,7 @@ export default factories.createCoreController('api::post.post', ({ strapi }) => 
   },
 
   async vote(ctx) {
+    strapi.log.info('Vote controller reached');
     const user = ctx.state.user;
     if (!user) {
       return ctx.unauthorized('Необходима авторизация.');
@@ -289,61 +290,87 @@ export default factories.createCoreController('api::post.post', ({ strapi }) => 
       return ctx.badRequest('Invalid vote type');
     }
 
+    strapi.log.info(`Vote: id=${id}, type=${type}, userId=${user?.id}`);
+
     try {
-      const post = await strapi.entityService.findOne('api::post.post', id, {
+      // Use strapi.documents to find by documentId (stable ID)
+      const post = await strapi.documents('api::post.post').findOne({
+        documentId: id,
         populate: ['upvoted_by', 'downvoted_by'],
       });
 
+      strapi.log.info(`Vote: found post via documents.findOne? ${!!post} (docId=${post?.documentId})`);
+
       if (!post) {
+        // Debug: list recent posts to see what IDs exist
+        const recentPosts = await strapi.db.query('api::post.post').findMany({
+          orderBy: { id: 'desc' },
+          limit: 5,
+          select: ['id', 'documentId', 'title'],
+        });
+        strapi.log.info(`Vote: Post ${id} not found. Recent posts: ${JSON.stringify(recentPosts)}`);
+
         return ctx.notFound('Post not found');
       }
 
-      const postAny = post as any;
-      const upvoters = (postAny.upvoted_by || []).map((u: any) => u.id);
-      const downvoters = (postAny.downvoted_by || []).map((u: any) => u.id);
+      // Fetch user to ensure we have documentId
+      const fullUser = await strapi.db.query('plugin::users-permissions.user').findOne({
+        where: { id: user.id },
+      });
 
-      const userId = user.id;
-      const isUpvoted = upvoters.includes(userId);
-      const isDownvoted = downvoters.includes(userId);
+      const userDocId = fullUser.documentId;
+      strapi.log.info(`Vote: fetched user docId: ${userDocId}`);
+
+      const postAny = post as any;
+      // Map to Document IDs
+      const upvoters = (postAny.upvoted_by || []).map((u: any) => u.documentId).filter(Boolean);
+      const downvoters = (postAny.downvoted_by || []).map((u: any) => u.documentId).filter(Boolean);
+
+      strapi.log.info(`Vote: existing upvoters (docIds): ${JSON.stringify(upvoters)}`);
+
+      const isUpvoted = upvoters.includes(userDocId);
+      const isDownvoted = downvoters.includes(userDocId);
 
       let newUpvoters = [...upvoters];
       let newDownvoters = [...downvoters];
 
       if (type === 'up') {
         if (isUpvoted) {
-          // Toggle off
-          newUpvoters = newUpvoters.filter((id) => id !== userId);
+          newUpvoters = newUpvoters.filter((id) => id !== userDocId);
         } else {
-          // Add upvote, remove downvote if exists
-          newUpvoters.push(userId);
-          newDownvoters = newDownvoters.filter((id) => id !== userId);
+          newUpvoters.push(userDocId);
+          newDownvoters = newDownvoters.filter((id) => id !== userDocId);
         }
       } else {
-        // type === 'down'
         if (isDownvoted) {
-          // Toggle off
-          newDownvoters = newDownvoters.filter((id) => id !== userId);
+          newDownvoters = newDownvoters.filter((id) => id !== userDocId);
         } else {
-          // Add downvote, remove upvote if exists
-          newDownvoters.push(userId);
-          newUpvoters = newUpvoters.filter((id) => id !== userId);
+          newDownvoters.push(userDocId);
+          newUpvoters = newUpvoters.filter((id) => id !== userDocId);
         }
       }
 
+      strapi.log.info(`Vote: new upvoters: ${JSON.stringify(newUpvoters)}`);
+
       const newVoteCount = newUpvoters.length - newDownvoters.length;
 
-      const updatedPost = await strapi.entityService.update('api::post.post', id, {
+      // Use strapi.documents to update
+      const updatedPost = await strapi.documents('api::post.post').update({
+        documentId: post.documentId,
         data: {
           votes: newVoteCount,
-          upvoted_by: newUpvoters as any,
-          downvoted_by: newDownvoters as any,
+          upvoted_by: newUpvoters,
+          downvoted_by: newDownvoters,
         },
+        status: 'published', // Important for draft/publish system
       });
+
+      strapi.log.info(`Vote: updated successfully. New votes: ${updatedPost.votes}`);
 
       // Determine new user vote status
       let userVoteStatus = null;
-      if (newUpvoters.includes(userId)) userVoteStatus = 'up';
-      if (newDownvoters.includes(userId)) userVoteStatus = 'down';
+      if (newUpvoters.includes(userDocId)) userVoteStatus = 'up';
+      if (newDownvoters.includes(userDocId)) userVoteStatus = 'down';
 
       return { votes: updatedPost.votes, userVote: userVoteStatus };
     } catch (error) {
@@ -352,3 +379,4 @@ export default factories.createCoreController('api::post.post', ({ strapi }) => 
     }
   },
 }));
+
