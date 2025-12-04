@@ -3,7 +3,7 @@ services:
   questly-db:
     image: postgres:15-alpine
     restart: unless-stopped
-    env_file: .env.production
+    env_file: .env
     environment:
       POSTGRES_USER: ${DATABASE_USERNAME}
       POSTGRES_PASSWORD: ${DATABASE_PASSWORD}
@@ -18,7 +18,7 @@ services:
       context: ./backend
       dockerfile: Dockerfile
     restart: unless-stopped
-    env_file: .env.production
+    env_file: .env
     environment:
       DATABASE_CLIENT: postgres
       DATABASE_HOST: questly-db
@@ -48,7 +48,7 @@ services:
       context: ./web
       dockerfile: Dockerfile
     restart: unless-stopped
-    env_file: .env.production
+    env_file: .env
     environment:
       NEXT_PUBLIC_STRAPI_URL: ${NEXT_PUBLIC_STRAPI_URL}
       NODE_ENV: production

@@ -36,7 +36,6 @@ RUN adduser --system --uid 1001 strapi
 COPY --from=builder /app/node_modules ./node_modules
 COPY --from=builder /app/dist ./dist
 COPY --from=builder /app/public ./public
-COPY --from=builder /app/favicon.ico ./favicon.ico
 COPY --from=builder /app/package.json ./package.json
 # Copy other necessary files like config, src (if needed for runtime), etc.
 # Strapi needs 'config' folder at runtime
