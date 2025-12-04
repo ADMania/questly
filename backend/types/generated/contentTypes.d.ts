@@ -603,6 +603,43 @@ export interface ApiDifficultyDifficulty extends Struct.CollectionTypeSchema {
   };
 }
 
+export interface ApiFeedbackFeedback extends Struct.CollectionTypeSchema {
+  collectionName: 'feedbacks';
+  info: {
+    description: 'User feedback and bug reports';
+    displayName: 'Feedback';
+    pluralName: 'feedbacks';
+    singularName: 'feedback';
+  };
+  options: {
+    draftAndPublish: false;
+  };
+  attributes: {
+    createdAt: Schema.Attribute.DateTime;
+    createdBy: Schema.Attribute.Relation<'oneToOne', 'admin::user'> &
+      Schema.Attribute.Private;
+    locale: Schema.Attribute.String & Schema.Attribute.Private;
+    localizations: Schema.Attribute.Relation<
+      'oneToMany',
+      'api::feedback.feedback'
+    > &
+      Schema.Attribute.Private;
+    message: Schema.Attribute.Text & Schema.Attribute.Required;
+    page_context: Schema.Attribute.String;
+    publishedAt: Schema.Attribute.DateTime;
+    type: Schema.Attribute.Enumeration<['bug', 'suggestion', 'other']> &
+      Schema.Attribute.Required &
+      Schema.Attribute.DefaultTo<'bug'>;
+    updatedAt: Schema.Attribute.DateTime;
+    updatedBy: Schema.Attribute.Relation<'oneToOne', 'admin::user'> &
+      Schema.Attribute.Private;
+    user: Schema.Attribute.Relation<
+      'manyToOne',
+      'plugin::users-permissions.user'
+    >;
+  };
+}
+
 export interface ApiFragmentFragment extends Struct.CollectionTypeSchema {
   collectionName: 'fragments';
   info: {
@@ -1186,6 +1223,7 @@ export interface PluginUsersPermissionsUser
         minLength: 6;
       }>;
     experience: Schema.Attribute.Integer;
+    feedbacks: Schema.Attribute.Relation<'oneToMany', 'api::feedback.feedback'>;
     locale: Schema.Attribute.String & Schema.Attribute.Private;
     localizations: Schema.Attribute.Relation<
       'oneToMany',
@@ -1233,6 +1271,7 @@ declare module '@strapi/strapi' {
       'api::category.category': ApiCategoryCategory;
       'api::comment.comment': ApiCommentComment;
       'api::difficulty.difficulty': ApiDifficultyDifficulty;
+      'api::feedback.feedback': ApiFeedbackFeedback;
       'api::fragment.fragment': ApiFragmentFragment;
       'api::post.post': ApiPostPost;
       'api::quest.quest': ApiQuestQuest;

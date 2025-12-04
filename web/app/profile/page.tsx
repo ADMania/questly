@@ -4,6 +4,7 @@ import { useCallback, useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import BackgroundGrid from "@/components/BackgroundGrid";
 import AdventureCard from "@/components/cards/AdventureCard";
+import FeedbackModal from "@/components/modals/FeedbackModal";
 import { motion } from "framer-motion";
 import PostCard, { FeedPost } from "@/components/feed/PostCard";
 import { getCategoryLabel, getCategoryLabelOrFallback } from "@/lib/categories";
@@ -386,6 +387,9 @@ export default function ProfilePage() {
   // Profile editing state
   const [isEditingProfile, setIsEditingProfile] = useState(false);
   const [isUpdatingProfile, setIsUpdatingProfile] = useState(false);
+
+  // Feedback state
+  const [isFeedbackOpen, setIsFeedbackOpen] = useState(false);
 
   const api = process.env.NEXT_PUBLIC_STRAPI_URL || "http://localhost:1337";
 
@@ -810,6 +814,16 @@ export default function ProfilePage() {
             <div className="flex gap-2">
               <button
                 type="button"
+                onClick={() => setIsFeedbackOpen(true)}
+                className="flex items-center justify-center w-10 h-10 rounded-xl border-2 border-[#d2a06f] bg-[#fff9eb] text-[#4a2c1f] shadow-[0_3px_0_#c99063] transition hover:-translate-y-0.5 hover:shadow-[0_5px_0_#c99063]"
+                aria-label="Обратная связь"
+              >
+                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor" className="w-5 h-5">
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M7.5 8.25h9m-9 3H12m-9.75 1.51c0 1.6 1.123 2.994 2.707 3.227 1.129.166 2.27.293 3.423.379.35.026.67.21.865.501L12 21l2.755-4.133a1.14 1.14 0 01.865-.501 48.172 48.172 0 003.423-.379c1.584-.233 2.707-1.626 2.707-3.228V6.741c0-1.602-1.123-2.995-2.707-3.228A48.394 48.394 0 0012 3c-2.392 0-4.744.175-7.043.513C3.373 3.746 2.25 5.14 2.25 6.741v6.018z" />
+                </svg>
+              </button>
+              <button
+                type="button"
                 onClick={() => setIsEditingProfile(true)}
                 className="px-4 py-2 rounded-xl border-2 border-[#d2a06f] bg-[#fff9eb] text-[#4a2c1f] text-sm font-semibold shadow-[0_3px_0_#c99063] transition hover:-translate-y-0.5 hover:shadow-[0_5px_0_#c99063]"
               >
@@ -974,6 +988,13 @@ export default function ProfilePage() {
           isSubmitting={isUpdatingProfile}
           onClose={() => setIsEditingProfile(false)}
           onSubmit={handleUpdateProfile}
+        />
+      )}
+
+      {isFeedbackOpen && (
+        <FeedbackModal
+          onClose={() => setIsFeedbackOpen(false)}
+          context="/profile"
         />
       )}
 

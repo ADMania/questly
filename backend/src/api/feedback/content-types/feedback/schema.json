@@ -1,0 +1,39 @@
+{
+    "kind": "collectionType",
+    "collectionName": "feedbacks",
+    "info": {
+        "singularName": "feedback",
+        "pluralName": "feedbacks",
+        "displayName": "Feedback",
+        "description": "User feedback and bug reports"
+    },
+    "options": {
+        "draftAndPublish": false
+    },
+    "pluginOptions": {},
+    "attributes": {
+        "message": {
+            "type": "text",
+            "required": true
+        },
+        "type": {
+            "type": "enumeration",
+            "enum": [
+                "bug",
+                "suggestion",
+                "other"
+            ],
+            "default": "bug",
+            "required": true
+        },
+        "page_context": {
+            "type": "string"
+        },
+        "user": {
+            "type": "relation",
+            "relation": "manyToOne",
+            "target": "plugin::users-permissions.user",
+            "inversedBy": "feedbacks"
+        }
+    }
+}

@@ -339,7 +339,7 @@ export default function Home() {
           <div className="space-y-6 text-center animate-fadeIn">
             <div className="rounded-xl border-2 border-[#d2a06f] bg-[#fff9eb] shadow-[0_4px_0_#c99063,0_6px_8px_rgба(0,0,0,0.15)] p-6">
               <h3 className="text-2xl font-semibold mb-3 text-[#c57758]">
-                Версия 1.3 — декабрь 2025
+                Версия 1.3 — ноябрь 2025
               </h3>
               <ul className="text-lg leading-relaxed space-y-1">
                 <li>• Система профилей и постов</li>

@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 import AdventureCard from "@/components/cards/AdventureCard";
+import FeedbackModal from "@/components/modals/FeedbackModal";
 
 type QuestPayload = {
   quest: string;
@@ -33,6 +34,7 @@ export default function QuestModal({
   actionError = null,
 }: QuestModalProps) {
   const [scale, setScale] = useState(1);
+  const [isFeedbackOpen, setIsFeedbackOpen] = useState(false);
 
   useEffect(() => {
     const calculateScale = () => {
@@ -71,6 +73,18 @@ export default function QuestModal({
           type="button"
         >
           ×
+        </button>
+
+        <button
+          onClick={() => setIsFeedbackOpen(true)}
+          disabled={isProcessing}
+          className="absolute -top-8 left-1 text-white/80 drop-shadow-md transition hover:scale-110 hover:text-white disabled:cursor-not-allowed disabled:opacity-60 disabled:hover:scale-100"
+          aria-label="Сообщить об ошибке"
+          type="button"
+        >
+          <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor" className="w-7 h-7">
+            <path strokeLinecap="round" strokeLinejoin="round" d="M12 9v3.75m-9.303 3.376c-.866 1.5.217 3.374 1.948 3.374h14.71c1.73 0 2.813-1.874 1.948-3.374L13.949 3.378c-.866-1.5-3.032-1.5-3.898 0L2.697 16.126zM12 15.75h.007v.008H12v-.008z" />
+          </svg>
         </button>
 
         <div
@@ -117,6 +131,13 @@ export default function QuestModal({
           </p>
         )}
       </div>
+
+      {isFeedbackOpen && (
+        <FeedbackModal
+          onClose={() => setIsFeedbackOpen(false)}
+          context={`/quest/${quest.category}/${quest.difficulty}`}
+        />
+      )}
     </div>
   );
 }
