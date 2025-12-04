@@ -40,6 +40,16 @@
       "relation": "oneToMany",
       "target": "api::comment.comment",
       "mappedBy": "post"
+    },
+    "upvoted_by": {
+      "type": "relation",
+      "relation": "manyToMany",
+      "target": "plugin::users-permissions.user"
+    },
+    "downvoted_by": {
+      "type": "relation",
+      "relation": "manyToMany",
+      "target": "plugin::users-permissions.user"
     }
   }
 }

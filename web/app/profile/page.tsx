@@ -4,8 +4,11 @@ import { useCallback, useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import BackgroundGrid from "@/components/BackgroundGrid";
 import AdventureCard from "@/components/cards/AdventureCard";
+import { motion } from "framer-motion";
 import PostCard, { FeedPost } from "@/components/feed/PostCard";
 import { getCategoryLabel, getCategoryLabelOrFallback } from "@/lib/categories";
+
+// TODO: измнеить вывод постов, перенести логику из ленты
 
 const tabs: { key: "quests" | "activity"; label: string }[] = [
   { key: "quests", label: "Квесты" },
@@ -90,7 +93,8 @@ const normalizePostEntry = (entry: any): FeedPost => {
   const apiBase = (process.env.NEXT_PUBLIC_STRAPI_URL || "http://localhost:1337").replace(/\/+$/, "");
 
   return {
-    id: baseEntry?.id ?? generateClientId(),
+    id: baseEntry?.id ?? attributes?.id ?? baseEntry?.documentId ?? generateClientId(),
+    documentId: baseEntry?.documentId,
     title: typeof attributes?.title === "string" && attributes.title.trim().length > 0 ? attributes.title : "Без названия",
     content: typeof attributes?.content === "string" ? attributes.content : "",
     createdAt: typeof attributes?.createdAt === "string" ? attributes.createdAt : null,
@@ -108,7 +112,9 @@ const normalizePostEntry = (entry: any): FeedPost => {
       symbolSeed: typeof cardAttributes?.symbol_seed === "string" && cardAttributes.symbol_seed.length > 0
         ? cardAttributes.symbol_seed
         : String(attachedCardData?.id ?? generateClientId()),
-    }
+    },
+    votes: attributes?.votes ? parseInt(attributes.votes) : 0,
+    userVote: attributes?.userVote ?? null,
   };
 };
 
@@ -267,8 +273,15 @@ export default function ProfilePage() {
   const router = useRouter();
   const [active, setActive] = useState<"quests" | "activity">("quests");
   const [user, setUser] = useState<any>(null);
+
+  // Cards & Pagination
   const [cards, setCards] = useState<Card[]>([]);
   const [cardsError, setCardsError] = useState<string | null>(null);
+  const [cardsPage, setCardsPage] = useState(1);
+  const [cardsPageSize] = useState(6); // 6 cards per page for better grid layout
+  const [cardsTotal, setCardsTotal] = useState(0);
+  const [isCardsLoading, setIsCardsLoading] = useState(false);
+
   const [posts, setPosts] = useState<FeedPost[]>([]);
   const [postsError, setPostsError] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
@@ -368,15 +381,8 @@ export default function ProfilePage() {
         throw new Error(errorMessage);
       }
 
-      const normalizedPost = normalizePostEntry(payload?.data ?? payload);
-      setPosts((prev) => [normalizedPost, ...prev]);
-      setCards((prev) =>
-        prev.map((card) =>
-          String(card.id) === String(cardForPost.id) ? { ...card, postId: normalizedPost.id } : card,
-        ),
-      );
-      setActive("activity");
-      closePostComposer();
+      // Force reload to ensure IDs are consistent
+      window.location.reload();
     } catch (error: any) {
       setPostError(error?.message ?? "Не удалось сохранить пост.");
     } finally {
@@ -428,7 +434,93 @@ export default function ProfilePage() {
     }
   };
 
-  // 🔹 Получаем данные пользователя и связанные коллекции
+  const fetchCards = useCallback(async (userId: number, page: number) => {
+    const jwt = localStorage.getItem("jwt");
+    if (!jwt) return;
+
+    setIsCardsLoading(true);
+    setCardsError(null);
+
+    try {
+      const params = new URLSearchParams();
+      params.append("populate", "categories");
+      params.append("pagination[page]", String(page));
+      params.append("pagination[pageSize]", String(cardsPageSize));
+      params.append("sort", "createdAt:desc");
+
+      const res = await fetch(`${api}/api/cards/mine?${params.toString()}`, {
+        headers: { Authorization: `Bearer ${jwt}` },
+      });
+
+      if (!res.ok) {
+        const errorText = await res.text();
+        console.error("Fetch cards failed:", res.status, errorText);
+        throw new Error(`Failed to fetch cards: ${res.status} ${errorText}`);
+      }
+
+      const data = await res.json();
+      const rawCards = data.data || [];
+      const meta = data.meta?.pagination;
+
+      if (meta) {
+        setCardsTotal(meta.total);
+      }
+
+      const normalizedCards: Card[] = rawCards.map((entry: any) => {
+        const card = entry.attributes || entry;
+        const categoriesList = readCategoryEntries(card.categories);
+
+        const categoryTitles = categoriesList
+          .map((item: any) => {
+            const attr = item?.attributes ?? item ?? {};
+            const rawValue = attr.title ?? attr.name ?? attr.slug ?? null;
+            if (typeof rawValue !== "string" || rawValue.trim().length === 0) return null;
+            const label = getCategoryLabel(rawValue);
+            return label || rawValue;
+          })
+          .filter((v: any): v is string => typeof v === "string" && v.length > 0);
+
+        const difficultyValue = typeof card?.difficulty === "string" ? card.difficulty : "medium";
+        const normalizedDifficulty: Card["difficulty"] =
+          ["easy", "medium", "hard"].includes(difficultyValue)
+            ? (difficultyValue as Card["difficulty"])
+            : "medium";
+
+        return {
+          id: entry.id,
+          quest_text: card.quest_text || "Без описания",
+          difficulty: normalizedDifficulty,
+          symbol_seed: card.symbol_seed || String(entry.id),
+          primaryCategory: categoryTitles[0] ?? getCategoryLabelOrFallback(undefined, "Личное приключение"),
+          categories: categoryTitles,
+          postId: card.post?.id ?? null,
+        };
+      });
+
+      const uniqueCardsMap = new Map();
+      normalizedCards.forEach((card) => {
+        const key = card.symbol_seed;
+        if (!uniqueCardsMap.has(key)) {
+          uniqueCardsMap.set(key, card);
+        } else {
+          const existing = uniqueCardsMap.get(key);
+          if (!existing.postId && card.postId) {
+            uniqueCardsMap.set(key, card);
+          }
+        }
+      });
+      const uniqueCards = Array.from(uniqueCardsMap.values());
+
+      setCards(uniqueCards);
+    } catch (err) {
+      console.error(err);
+      setCardsError("Не удалось загрузить квесты.");
+    } finally {
+      setIsCardsLoading(false);
+    }
+  }, [api, cardsPageSize]);
+
+  // Initial load
   useEffect(() => {
     const jwt = localStorage.getItem("jwt");
     if (!jwt) {
@@ -436,132 +528,68 @@ export default function ProfilePage() {
       return;
     }
 
-    const fetchData = async () => {
-      setCardsError(null);
-      setPostsError(null);
-
+    const init = async () => {
       try {
         const meRes = await fetch(`${api}/api/me`, {
           headers: { Authorization: `Bearer ${jwt}` },
         });
 
         if (meRes.status === 401) {
-          setUser(null);
-          setCards([]);
-          setPosts([]);
           router.push("/login");
           return;
         }
 
-        if (!meRes.ok) {
-          throw new Error("PROFILE_FETCH_FAILED");
-        }
+        if (!meRes.ok) throw new Error("PROFILE_FETCH_FAILED");
 
         const profileData = await meRes.json();
         setUser(profileData);
 
-        const normalizedCards: Card[] = Array.isArray(profileData?.cards)
-          ? profileData.cards.map((card: any) => {
-            const categoriesList = Array.isArray(card?.categories) ? card.categories : [];
-            const categoryTitles = categoriesList
-              .map((item: any) => {
-                if (!item) return null;
-                const rawValue =
-                  typeof item === "string"
-                    ? item
-                    : item.title ?? item.name ?? item.slug ?? null;
-                if (typeof rawValue !== "string" || rawValue.trim().length === 0) {
-                  return null;
-                }
-                const label = getCategoryLabel(rawValue);
-                const readable = label || rawValue;
-                return readable.trim().length > 0 ? readable : null;
-              })
-              .filter((value: unknown): value is string => typeof value === "string" && value.length > 0);
+        // Fetch initial cards
+        await fetchCards(profileData.id, 1);
 
-            const difficultyValue = typeof card?.difficulty === "string" ? card.difficulty : "medium";
-            const normalizedDifficulty: Card["difficulty"] =
-              ["easy", "medium", "hard"].includes(difficultyValue)
-                ? (difficultyValue as Card["difficulty"])
-                : "medium";
-
-            const questText =
-              typeof card?.quest_text === "string" && card.quest_text.trim().length > 0
-                ? card.quest_text
-                : "Без описания";
-
-            const symbolSeed =
-              typeof card?.symbol_seed === "string" && card.symbol_seed.length > 0
-                ? card.symbol_seed
-                : String(card?.id ?? Date.now());
-
-            return {
-              id: card?.id ?? generateClientId(),
-              quest_text: questText,
-              difficulty: normalizedDifficulty,
-              symbol_seed: symbolSeed,
-              primaryCategory: categoryTitles[0] ?? getCategoryLabelOrFallback(undefined, "Личное приключение"),
-              categories: categoryTitles,
-              postId:
-                typeof card?.post_id === "number" || typeof card?.post_id === "string"
-                  ? card.post_id
-                  : null,
-            };
-          })
-          : [];
-
-        setCards(normalizedCards);
-
-        // Получаем посты пользователя
+        // Fetch posts
         const postParams = new URLSearchParams();
-        if (profileData?.id) {
-          postParams.append("filters[author][id][$eq]", String(profileData.id));
-        }
+        postParams.append("filters[author][id][$eq]", String(profileData.id));
         postParams.append("sort", "createdAt:desc");
         postParams.append("populate[attached_card][populate]", "categories");
-
-        if (!postParams.has("filters[author][id][$eq]")) {
-          setPosts([]);
-          return;
-        }
 
         const postsRes = await fetch(`${api}/api/posts?${postParams.toString()}`, {
           headers: { Authorization: `Bearer ${jwt}` },
         });
-        let normalizedPosts: FeedPost[] = [];
+
         if (postsRes.ok) {
           const postsData = await postsRes.json();
-          normalizedPosts = (Array.isArray(postsData?.data) ? postsData.data : []).map((entry: any) =>
+          const normalizedPosts = (Array.isArray(postsData?.data) ? postsData.data : []).map((entry: any) =>
             normalizePostEntry(entry),
           );
-        } else if (postsRes.status === 401) {
-          setPosts([]);
-          router.push("/login");
-          return;
-        } else {
-          setPostsError("Не удалось загрузить активность.");
+
+          const uniquePosts = normalizedPosts.filter((post: FeedPost, index: number, self: FeedPost[]) =>
+            index === self.findIndex((p) => p.id === post.id)
+          );
+
+          setPosts(uniquePosts);
         }
-        setPosts(normalizedPosts);
       } catch (err) {
         console.error(err);
-        setUser(null);
-        setCards([]);
-        setPosts([]);
-
-        if (err instanceof Error && err.message === "PROFILE_FETCH_FAILED") {
-          setCardsError("Не удалось загрузить профиль.");
-          setPostsError("Не удалось загрузить активность.");
-        } else {
-          setCardsError((prev) => prev ?? "Не удалось загрузить карточки.");
-          setPostsError((prev) => prev ?? "Не удалось загрузить активность.");
-        }
+        setCardsError("Не удалось загрузить профиль.");
       } finally {
         setLoading(false);
       }
     };
 
-    fetchData();
-  }, [router, api]);
+    init();
+  }, [router, api, fetchCards]);
+
+  // Handle page change
+  const handlePageChange = (newPage: number) => {
+    if (newPage < 1 || !user) return;
+    setCardsPage(newPage);
+    fetchCards(user.id, newPage);
+    // Scroll to top of list
+    window.scrollTo({ top: 0, behavior: "smooth" });
+  };
+
+  const totalPages = Math.ceil(cardsTotal / cardsPageSize);
 
   if (loading)
     return (
@@ -623,7 +651,7 @@ export default function ProfilePage() {
                 </p>
                 <div className="mt-4 grid grid-cols-3 gap-3 max-w-md text-center">
                   <div className="rounded-xl border-2 border-[#d2a06f] bg-white/80 py-2 shadow-[0_2px_0_#c99063]">
-                    <div className="text-xl font-bold">{cards.length}</div>
+                    <div className="text-xl font-bold">{cardsTotal}</div>
                     <div className="text-xs text-[#5e4632]">квестов</div>
                   </div>
                   <div className="rounded-xl border-2 border-[#d2a06f] bg-white/80 py-2 shadow-[0_2px_0_#c99063]">
@@ -665,41 +693,78 @@ export default function ProfilePage() {
                 {cardsError}
               </div>
             )}
-            <div className="grid justify-items-center gap-8 sm:grid-cols-2 xl:grid-cols-3">
-              {cards.length > 0 ? (
-                cards.map((card) => (
-                  <div key={card.id} className="flex w-full flex-col items-center">
-                    <div className="origin-top scale-[0.72] sm:scale-[0.78] md:scale-[0.84] lg:scale-[0.9]">
-                      <AdventureCard
-                        quest={{
-                          quest: card.quest_text,
-                          category: card.primaryCategory,
-                          difficulty: card.difficulty,
-                          symbolSeed: card.symbol_seed,
-                        }}
-                        isClosing={false}
-                      />
-                    </div>
-                    {card.categories.length > 1 && (
-                      <div className="mt-3 w-full max-w-[300px] text-center text-xs text-[#5e4632]/70">
-                        {card.categories.join(", ")}
+
+            <div className="flex flex-col gap-8">
+              {isCardsLoading ? (
+                <div className="py-12 text-center text-[#5e4632]/70">Загрузка квестов...</div>
+              ) : cards.length > 0 ? (
+                <>
+                  <div className="grid justify-items-center gap-8 sm:grid-cols-2 xl:grid-cols-3">
+                    {cards.map((card) => (
+                      <div key={card.id} className="flex w-full flex-col items-center">
+                        <div className="relative transition-transform duration-300 ease-out hover:scale-105 hover:z-20 pointer-events-none">
+                          <div className="origin-top scale-[0.72] sm:scale-[0.78] md:scale-[0.84] lg:scale-[0.9] pointer-events-auto">
+                            <AdventureCard
+                              quest={{
+                                quest: card.quest_text,
+                                category: card.primaryCategory,
+                                difficulty: card.difficulty,
+                                symbolSeed: card.symbol_seed,
+                              }}
+                              isClosing={false}
+                            />
+                          </div>
+                        </div>
+                        <div className="flex w-full flex-col items-center -mt-28 sm:-mt-24 md:-mt-16 lg:-mt-10 z-10">
+                          {card.categories.length > 1 && (
+                            <div className="mb-2 w-full max-w-[300px] text-center text-xs text-[#5e4632]/70">
+                              {card.categories.join(", ")}
+                            </div>
+                          )}
+                          <div className="w-full max-w-[320px]">
+                            <motion.button
+                              type="button"
+                              initial={{ opacity: 0, scale: 0.8 }}
+                              animate={{ opacity: 1, scale: 1 }}
+                              transition={{ duration: 0.4, delay: 0.1 }}
+                              onClick={() => openPostComposer(card)}
+                              disabled={Boolean(card.postId)}
+                              className="w-full rounded-xl border-2 border-[#d2a06f] bg-[#fff9eb] px-4 py-2 text-sm font-semibold text-[#4a2c1f] shadow-[0_3px_0_#c99063] transition hover:-translate-y-0.5 hover:shadow-[0_5px_0_#c99063] disabled:cursor-not-allowed disabled:bg-transparent disabled:border-dashed disabled:border-[#d2a06f]/40 disabled:text-[#5e4632]/60 disabled:shadow-none disabled:translate-y-0"
+                            >
+                              {card.postId ? "Пост опубликован" : "Поделиться в ленте"}
+                            </motion.button>
+                            {card.postId && (
+                              <p className="mt-1 text-center text-xs text-[#5e4632]/70">Вы уже поделились этим приключением.</p>
+                            )}
+                          </div>
+                        </div>
                       </div>
-                    )}
-                    <div className="mt-4 w-full max-w-[320px]">
-                      <button
-                        type="button"
-                        onClick={() => openPostComposer(card)}
-                        disabled={Boolean(card.postId)}
-                        className="w-full rounded-xl border-2 border-[#d2a06f] bg-[#fff9eb] px-4 py-2 text-sm font-semibold text-[#4a2c1f] shadow-[0_3px_0_#c99063] transition hover:-translate-y-0.5 hover:shadow-[0_5px_0_#c99063] disabled:cursor-not-allowed disabled:opacity-60"
-                      >
-                        {card.postId ? "Пост опубликован" : "Поделиться в ленте"}
-                      </button>
-                      {card.postId && (
-                        <p className="mt-2 text-center text-xs text-[#5e4632]/70">Вы уже поделились этим приключением.</p>
-                      )}
-                    </div>
+                    ))}
                   </div>
-                ))
+
+                  {/* Пагинация */}
+                  {totalPages > 1 && (
+                    <div className="mt-8 flex justify-center gap-2">
+                      <button
+                        onClick={() => handlePageChange(cardsPage - 1)}
+                        disabled={cardsPage === 1}
+                        className="rounded-lg border-2 border-[#d2a06f] bg-[#fff9eb] px-4 py-2 font-semibold text-[#4a2c1f] shadow-[0_2px_0_#c99063] disabled:opacity-50 disabled:shadow-none"
+                      >
+                        ←
+                      </button>
+                      <span className="flex items-center px-4 font-bold text-[#3c2415]">
+                        {cardsPage} / {totalPages}
+                      </span>
+                      <button
+                        onClick={() => handlePageChange(cardsPage + 1)}
+                        disabled={cardsPage === totalPages}
+                        className="rounded-lg border-2 border-[#d2a06f] bg-[#fff9eb] px-4 py-2 font-semibold text-[#4a2c1f] shadow-[0_2px_0_#c99063] disabled:opacity-50 disabled:shadow-none"
+                      >
+                        →
+                      </button>
+                    </div>
+                  )}
+                </>
               ) : (
                 <div className="col-span-full flex flex-col items-center justify-center py-12 text-center text-[#5e4632]/70 min-h-[220px]">
                   <p>У вас пока нет карточек. Получите первую, чтобы начать приключение!</p>
@@ -719,7 +784,7 @@ export default function ProfilePage() {
             <div className="space-y-4">
               {posts.length > 0 ? (
                 posts.map((post) => (
-                  <PostCard key={post.id} post={post} onDelete={initiateDeletePost} />
+                  <PostCard key={post.id} post={post} onDelete={initiateDeletePost} readOnly={true} />
                 ))
               ) : (
                 <div className="flex flex-col items-center justify-center py-12 text-center text-[#5e4632]/70 min-h-[220px]">

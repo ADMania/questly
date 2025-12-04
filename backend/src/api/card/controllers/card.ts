@@ -80,21 +80,26 @@ export default factories.createCoreController('api::card.card', ({ strapi }) => 
       return ctx.unauthorized("Необходима авторизация");
     }
 
-    ctx.query = {
-      filters: {
-        owner: {
-          id: user.id,
-        },
-      },
-      populate: {
-        categories: {
-          fields: ['name', 'slug'],
-        },
-      },
-      sort: ['createdAt:desc'],
-      pagination: ctx.query?.pagination,
-    };
+    const query = ctx.query as any;
+    const page = query.pagination?.page ? parseInt(query.pagination.page) : 1;
+    const pageSize = query.pagination?.pageSize ? parseInt(query.pagination.pageSize) : 10;
 
-    return super.find(ctx);
+    try {
+      const { results, pagination } = await strapi.entityService.findPage('api::card.card', {
+        filters: {
+          owner: user.id,
+        },
+        populate: ['categories', 'post'],
+        sort: { createdAt: 'desc' },
+        page,
+        pageSize,
+      });
+
+      const sanitizedResults = await this.sanitizeOutput(results, ctx);
+      return this.transformResponse(sanitizedResults, { pagination });
+    } catch (error) {
+      strapi.log.error("Failed to fetch user cards:", error);
+      return ctx.internalServerError("Не удалось загрузить карточки.");
+    }
   },
 }));

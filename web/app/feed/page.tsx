@@ -80,7 +80,8 @@ const normalizeFeedPost = (entry: any): FeedPost | null => {
   const avatarUrl = authorAttributes?.avatar?.data?.attributes?.url ?? authorAttributes?.avatar?.url;
 
   return {
-    id: data?.id ?? generateClientId(),
+    id: data?.id ?? attributes?.id ?? data?.documentId ?? generateClientId(),
+    documentId: data?.documentId,
     title:
       typeof attributes?.title === "string" && attributes.title.trim().length > 0
         ? attributes.title
@@ -98,6 +99,8 @@ const normalizeFeedPost = (entry: any): FeedPost | null => {
       difficulty,
       symbolSeed: typeof cardAttributes?.symbol_seed === "string" ? cardAttributes.symbol_seed : undefined,
     },
+    votes: attributes?.votes ? parseInt(attributes.votes) : 0,
+    userVote: attributes?.userVote ?? null,
   };
 };
 
@@ -118,8 +121,15 @@ export default function FeedPage() {
         params.append("sort", "createdAt:desc");
         params.append("pagination[pageSize]", "20");
 
+        const jwt = typeof window !== 'undefined' ? localStorage.getItem("jwt") : null;
+        const headers: HeadersInit = {};
+        if (jwt) {
+          headers["Authorization"] = `Bearer ${jwt}`;
+        }
+
         const response = await fetch(`/cms/api/posts?${params.toString()}`, {
           cache: "no-store",
+          headers,
         });
 
         if (!response.ok) {

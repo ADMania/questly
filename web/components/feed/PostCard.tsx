@@ -10,6 +10,7 @@ type FeedDifficulty = "easy" | "medium" | "hard";
 
 export type FeedPost = {
     id: number | string;
+    documentId?: string;
     title: string;
     content: string;
     createdAt: string | null;
@@ -22,18 +23,22 @@ export type FeedPost = {
         categoryLabel: string;
         categorySlugs: string[];
         difficulty: FeedDifficulty;
-        symbolSeed?: string; // Added symbolSeed
+        symbolSeed?: string;
     };
+    votes: number;
+    userVote?: "up" | "down" | null;
 };
 
 interface PostCardProps {
     post: FeedPost;
     onDelete?: (id: number | string) => void;
+    readOnly?: boolean;
 }
 
-export default function PostCard({ post, onDelete }: PostCardProps) {
-    const [votes, setVotes] = useState(0);
-    const [userVote, setUserVote] = useState<"up" | "down" | null>(null);
+export default function PostCard({ post, onDelete, readOnly = false }: PostCardProps) {
+    const [votes, setVotes] = useState(parseInt(String(post.votes || 0)));
+    const [userVote, setUserVote] = useState<"up" | "down" | null>(post.userVote || null);
+    const [isVoting, setIsVoting] = useState(false);
 
     // Comments state
     const [comments, setComments] = useState<any[]>([]);
@@ -42,30 +47,81 @@ export default function PostCard({ post, onDelete }: PostCardProps) {
     const [isPostingComment, setIsPostingComment] = useState(false);
     const [showComments, setShowComments] = useState(false);
 
-    const handleVote = (type: "up" | "down") => {
+    const handleVote = async (type: "up" | "down") => {
+        if (readOnly || isVoting) return;
+
+        const jwt = localStorage.getItem("jwt");
+        if (!jwt) {
+            alert("Войдите, чтобы голосовать");
+            return;
+        }
+
+        setIsVoting(true);
+
+        // Optimistic update
+        const previousVotes = votes;
+        const previousUserVote = userVote;
+
+        let newVotes = votes;
+        let newUserVote = userVote;
+
         if (userVote === type) {
-            setUserVote(null);
-            setVotes((prev) => (type === "up" ? prev - 1 : prev + 1));
+            // Cancel vote
+            newUserVote = null;
+            newVotes = type === "up" ? votes - 1 : votes + 1;
         } else {
+            // Change or new vote
             if (userVote === "up") {
-                setVotes((prev) => prev - 2);
+                newVotes = votes - 2;
             } else if (userVote === "down") {
-                setVotes((prev) => prev + 2);
+                newVotes = votes + 2;
             } else {
-                setVotes((prev) => (type === "up" ? prev + 1 : prev - 1));
+                newVotes = type === "up" ? votes + 1 : votes - 1;
             }
-            setUserVote(type);
+            newUserVote = type;
+        }
+
+        setVotes(newVotes);
+        setUserVote(newUserVote);
+
+        try {
+            const res = await fetch(`${process.env.NEXT_PUBLIC_STRAPI_URL}/api/posts/${post.id}/vote`, {
+                method: "PUT",
+                headers: {
+                    "Content-Type": "application/json",
+                    Authorization: `Bearer ${jwt}`,
+                },
+                body: JSON.stringify({ type }),
+            });
+
+            if (!res.ok) {
+                throw new Error("Vote failed");
+            }
+
+            const data = await res.json();
+            if (data.votes !== undefined) {
+                setVotes(parseInt(data.votes));
+            }
+        } catch (error) {
+            console.error("Vote error:", error);
+            setVotes(previousVotes);
+            setUserVote(previousUserVote);
+        } finally {
+            setIsVoting(false);
         }
     };
 
     const fetchComments = async () => {
         setIsLoadingComments(true);
         try {
-            const response = await fetch(
-                `${process.env.NEXT_PUBLIC_STRAPI_URL}/api/comments/post/${post.id}`
-            );
+            // Use documentId if available, otherwise fallback to id
+            const identifier = post.documentId || post.id;
+            const url = `${process.env.NEXT_PUBLIC_STRAPI_URL}/api/comments/post/${identifier}`;
+            const response = await fetch(url);
             const data = await response.json();
+            console.log("[PostCard] Comments data:", data);
             if (data.data) {
+                console.log("[PostCard] First comment:", data.data[0]);
                 setComments(data.data);
             }
         } catch (error) {
@@ -208,33 +264,39 @@ export default function PostCard({ post, onDelete }: PostCardProps) {
                     <div className="mt-6">
                         <div className="flex flex-col sm:flex-row items-center justify-between gap-4">
                             {/* Voting */}
-                            <div className="flex items-center gap-2 rounded-xl border-2 border-[#d2a06f]/50 bg-white/60 p-1.5">
-                                <button
-                                    onClick={() => handleVote("up")}
-                                    className={`p-2 rounded-lg transition-all ${userVote === "up"
-                                        ? "bg-[#8ab58a] text-white shadow-sm"
-                                        : "hover:bg-[#8ab58a]/20 text-[#5e4632]"
-                                        }`}
-                                >
-                                    <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-                                        <path d="m18 15-6-6-6 6" />
-                                    </svg>
-                                </button>
-                                <span className={`font-bold min-w-[24px] text-center ${userVote === "up" ? "text-[#6a956a]" : userVote === "down" ? "text-[#d06767]" : "text-[#5e4632]"
+                            <div className={`flex items-center gap-2 rounded-xl border-2 border-[#d2a06f]/50 bg-white/60 p-1.5 ${readOnly ? 'opacity-80' : ''}`}>
+                                {!readOnly && (
+                                    <button
+                                        onClick={() => handleVote("up")}
+                                        disabled={isVoting}
+                                        className={`p-2 rounded-lg transition-all ${userVote === "up"
+                                            ? "bg-[#8ab58a] text-white shadow-sm"
+                                            : "hover:bg-[#8ab58a]/20 text-[#5e4632]"
+                                            }`}
+                                    >
+                                        <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                                            <path d="m18 15-6-6-6 6" />
+                                        </svg>
+                                    </button>
+                                )}
+                                <span className={`font-bold min-w-[24px] text-center px-2 ${userVote === "up" ? "text-[#6a956a]" : userVote === "down" ? "text-[#d06767]" : "text-[#5e4632]"
                                     }`}>
                                     {votes > 0 ? `+${votes}` : votes}
                                 </span>
-                                <button
-                                    onClick={() => handleVote("down")}
-                                    className={`p-2 rounded-lg transition-all ${userVote === "down"
-                                        ? "bg-[#d06767] text-white shadow-sm"
-                                        : "hover:bg-[#d06767]/20 text-[#5e4632]"
-                                        }`}
-                                >
-                                    <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-                                        <path d="m6 9 6 6 6-6" />
-                                    </svg>
-                                </button>
+                                {!readOnly && (
+                                    <button
+                                        onClick={() => handleVote("down")}
+                                        disabled={isVoting}
+                                        className={`p-2 rounded-lg transition-all ${userVote === "down"
+                                            ? "bg-[#d06767] text-white shadow-sm"
+                                            : "hover:bg-[#d06767]/20 text-[#5e4632]"
+                                            }`}
+                                    >
+                                        <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                                            <path d="m6 9 6 6 6-6" />
+                                        </svg>
+                                    </button>
+                                )}
                             </div>
 
                             {/* Comments Toggle */}
@@ -275,6 +337,26 @@ export default function PostCard({ post, onDelete }: PostCardProps) {
                                         comments.map((comment) => (
                                             <div key={comment.id} className="relative bg-[#fff9eb] rounded-xl p-4 border-2 border-[#d2a06f]/20 shadow-sm hover:border-[#d2a06f]/40 transition-colors">
                                                 <div className="absolute top-3 left-0 w-1 h-full rounded-r-full" />
+
+                                                <div className="flex items-center gap-2 mb-2">
+                                                    <div className="w-6 h-6 rounded-full border border-[#d2a06f] bg-[#f2e3bf] overflow-hidden flex-shrink-0">
+                                                        {comment.author?.avatar?.url ? (
+                                                            <img
+                                                                src={`${process.env.NEXT_PUBLIC_STRAPI_URL}${comment.author.avatar.url}`}
+                                                                alt={comment.author.username}
+                                                                className="w-full h-full object-cover"
+                                                            />
+                                                        ) : (
+                                                            <div className="w-full h-full flex items-center justify-center text-[10px] font-bold text-[#c57758]">
+                                                                {comment.author?.username?.slice(0, 1).toUpperCase() ?? "?"}
+                                                            </div>
+                                                        )}
+                                                    </div>
+                                                    <span className="font-bold text-xs text-[#3c2415]">
+                                                        {comment.author?.username || "Неизвестный путник"}
+                                                    </span>
+                                                </div>
+
                                                 <p className="text-[#5e4632] text-sm leading-relaxed pl-2">{comment.content}</p>
                                                 <div className="mt-2 text-[10px] uppercase tracking-wider font-bold text-[#d2a06f] text-right">
                                                     {new Date(comment.createdAt).toLocaleDateString("ru-RU", {

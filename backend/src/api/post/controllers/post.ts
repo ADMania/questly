@@ -175,7 +175,9 @@ export default factories.createCoreController('api::post.post', ({ strapi }) => 
           populate: {
             avatar: true
           }
-        }
+        },
+        upvoted_by: { fields: ['id'] },
+        downvoted_by: { fields: ['id'] },
       },
       status: queryStatus,
       ...((typeof pagination === 'object' ? pagination : {}) as any),
@@ -185,32 +187,42 @@ export default factories.createCoreController('api::post.post', ({ strapi }) => 
       // Use entityService.findPage for pagination support
       const { results, pagination: paginationResult } = await strapi.entityService.findPage('api::post.post', query);
 
-      console.log('DEBUG: entityService results:', JSON.stringify(results, null, 2));
-
       // Manual sanitization to ensure relations are returned even if public permissions are missing
-      const safeResults = results.map((post: any) => ({
-        id: post.id,
-        documentId: post.documentId,
-        title: post.title,
-        content: post.content,
-        createdAt: post.createdAt,
-        updatedAt: post.updatedAt,
-        publishedAt: post.publishedAt,
-        votes: post.votes,
-        is_public: post.is_public,
-        attached_card: post.attached_card ? {
-          id: post.attached_card.id,
-          quest_text: post.attached_card.quest_text,
-          difficulty: post.attached_card.difficulty,
-          symbol_seed: post.attached_card.symbol_seed,
-          categories: post.attached_card.categories,
-        } : null,
-        author: post.author ? {
-          id: post.author.id,
-          username: post.author.username,
-          avatar: post.author.avatar,
-        } : null,
-      }));
+      const safeResults = results.map((post: any) => {
+        strapi.log.info(`[Post.find] Post ID: ${post.id}, DocumentId: ${post.documentId}`);
+        let userVote = null;
+        if (user) {
+          const upvoters = (post.upvoted_by || []).map((u: any) => u.id);
+          const downvoters = (post.downvoted_by || []).map((u: any) => u.id);
+          if (upvoters.includes(user.id)) userVote = 'up';
+          else if (downvoters.includes(user.id)) userVote = 'down';
+        }
+
+        return {
+          id: post.id,
+          documentId: post.documentId,
+          title: post.title,
+          content: post.content,
+          createdAt: post.createdAt,
+          updatedAt: post.updatedAt,
+          publishedAt: post.publishedAt,
+          votes: post.votes,
+          userVote, // Return the user's vote status
+          is_public: post.is_public,
+          attached_card: post.attached_card ? {
+            id: post.attached_card.id,
+            quest_text: post.attached_card.quest_text,
+            difficulty: post.attached_card.difficulty,
+            symbol_seed: post.attached_card.symbol_seed,
+            categories: post.attached_card.categories,
+          } : null,
+          author: post.author ? {
+            id: post.author.id,
+            username: post.author.username,
+            avatar: post.author.avatar,
+          } : null,
+        };
+      });
 
       return this.transformResponse(safeResults, { pagination: paginationResult });
     } catch (err) {
@@ -240,12 +252,103 @@ export default factories.createCoreController('api::post.post', ({ strapi }) => 
         return ctx.forbidden('Вы не можете удалить чужой пост.');
       }
 
+      // Delete associated comments
+      try {
+        const comments = await strapi.entityService.findMany('api::comment.comment', {
+          filters: { post: id },
+        });
+
+        if (Array.isArray(comments)) {
+          for (const comment of comments) {
+            await strapi.entityService.delete('api::comment.comment', comment.id);
+          }
+        }
+      } catch (err) {
+        strapi.log.warn(`[posts.delete] Failed to delete comments for post ${id}`, err);
+      }
+
       const deletedEntry = await strapi.entityService.delete('api::post.post', id);
       const sanitized = await this.sanitizeOutput(deletedEntry, ctx);
       return this.transformResponse(sanitized);
     } catch (error) {
       strapi.log.error('[posts.delete] Failed to delete entry', error);
       return ctx.internalServerError('Не удалось удалить пост.');
+    }
+  },
+
+  async vote(ctx) {
+    const user = ctx.state.user;
+    if (!user) {
+      return ctx.unauthorized('Необходима авторизация.');
+    }
+
+    const { id } = ctx.params;
+    const { type } = ctx.request.body;
+
+    if (!['up', 'down'].includes(type)) {
+      return ctx.badRequest('Invalid vote type');
+    }
+
+    try {
+      const post = await strapi.entityService.findOne('api::post.post', id, {
+        populate: ['upvoted_by', 'downvoted_by'],
+      });
+
+      if (!post) {
+        return ctx.notFound('Post not found');
+      }
+
+      const postAny = post as any;
+      const upvoters = (postAny.upvoted_by || []).map((u: any) => u.id);
+      const downvoters = (postAny.downvoted_by || []).map((u: any) => u.id);
+
+      const userId = user.id;
+      const isUpvoted = upvoters.includes(userId);
+      const isDownvoted = downvoters.includes(userId);
+
+      let newUpvoters = [...upvoters];
+      let newDownvoters = [...downvoters];
+
+      if (type === 'up') {
+        if (isUpvoted) {
+          // Toggle off
+          newUpvoters = newUpvoters.filter((id) => id !== userId);
+        } else {
+          // Add upvote, remove downvote if exists
+          newUpvoters.push(userId);
+          newDownvoters = newDownvoters.filter((id) => id !== userId);
+        }
+      } else {
+        // type === 'down'
+        if (isDownvoted) {
+          // Toggle off
+          newDownvoters = newDownvoters.filter((id) => id !== userId);
+        } else {
+          // Add downvote, remove upvote if exists
+          newDownvoters.push(userId);
+          newUpvoters = newUpvoters.filter((id) => id !== userId);
+        }
+      }
+
+      const newVoteCount = newUpvoters.length - newDownvoters.length;
+
+      const updatedPost = await strapi.entityService.update('api::post.post', id, {
+        data: {
+          votes: newVoteCount,
+          upvoted_by: newUpvoters as any,
+          downvoted_by: newDownvoters as any,
+        },
+      });
+
+      // Determine new user vote status
+      let userVoteStatus = null;
+      if (newUpvoters.includes(userId)) userVoteStatus = 'up';
+      if (newDownvoters.includes(userId)) userVoteStatus = 'down';
+
+      return { votes: updatedPost.votes, userVote: userVoteStatus };
+    } catch (error) {
+      strapi.log.error('Vote error:', error);
+      return ctx.internalServerError('Failed to vote');
     }
   },
 }));
