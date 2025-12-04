@@ -52,6 +52,7 @@ services:
       NEXT_PUBLIC_STRAPI_URL: ${NEXT_PUBLIC_STRAPI_URL}
       STRAPI_URL: http://questly-backend:1337
       NODE_ENV: production
+      PORT: 3000
     depends_on:
       - questly-backend
     networks:
