@@ -8,8 +8,6 @@ import { motion } from "framer-motion";
 import PostCard, { FeedPost } from "@/components/feed/PostCard";
 import { getCategoryLabel, getCategoryLabelOrFallback } from "@/lib/categories";
 
-// TODO: измнеить вывод постов, перенести логику из ленты
-
 const tabs: { key: "quests" | "activity"; label: string }[] = [
   { key: "quests", label: "Квесты" },
   { key: "activity", label: "Активность" },
@@ -230,6 +228,93 @@ interface DeleteConfirmationModalProps {
   onConfirm: () => void;
 }
 
+function ProfileEditModal({
+  user,
+  apiBase,
+  isSubmitting,
+  onClose,
+  onSubmit,
+}: {
+  user: any;
+  apiBase: string;
+  isSubmitting: boolean;
+  onClose: () => void;
+  onSubmit: (data: { username: string; avatarFile: File | null }) => void;
+}) {
+  const [username, setUsername] = useState(user.username);
+  const [avatarFile, setAvatarFile] = useState<File | null>(null);
+  const [previewUrl, setPreviewUrl] = useState<string | null>(
+    user.avatar?.url ? `${apiBase}${user.avatar.url}` : null
+  );
+
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (e.target.files && e.target.files[0]) {
+      const file = e.target.files[0];
+      setAvatarFile(file);
+      setPreviewUrl(URL.createObjectURL(file));
+    }
+  };
+
+  return (
+    <div className="fixed inset-0 z-[120] flex items-center justify-center bg-black/40 backdrop-blur-sm px-4 sm:px-6">
+      <div className="relative w-full max-w-md rounded-3xl border-2 border-[#d2a06f] bg-[#fff9eb] text-[#3c2415] shadow-[0_8px_0_#c99063,0_18px_30px_rgba(0,0,0,0.2)] p-6 sm:p-8">
+        <button
+          onClick={onClose}
+          disabled={isSubmitting}
+          className="absolute top-4 right-4 text-3xl font-semibold text-[#d26d75] transition hover:scale-110 disabled:opacity-50"
+        >
+          ×
+        </button>
+
+        <h2 className="text-2xl font-extrabold text-[#d26d75] mb-6">Редактировать профиль</h2>
+
+        <div className="flex flex-col items-center gap-4 mb-6">
+          <div className="relative w-24 h-24 rounded-full border-2 border-[#d2a06f] overflow-hidden bg-[#f2e3bf]">
+            {previewUrl ? (
+              <img src={previewUrl} alt="Avatar" className="w-full h-full object-cover" />
+            ) : (
+              <div className="w-full h-full flex items-center justify-center text-[#5e4632] opacity-50">
+                No img
+              </div>
+            )}
+            <label className="absolute inset-0 flex items-center justify-center bg-black/30 opacity-0 hover:opacity-100 transition-opacity cursor-pointer text-white font-bold text-xs">
+              Сменить
+              <input type="file" accept="image/*" onChange={handleFileChange} className="hidden" />
+            </label>
+          </div>
+        </div>
+
+        <label className="block mb-6">
+          <span className="text-sm font-semibold text-[#5e4632]">Никнейм</span>
+          <input
+            type="text"
+            value={username}
+            onChange={(e) => setUsername(e.target.value)}
+            className="mt-1 w-full rounded-xl border-2 border-[#d2a06f]/70 bg-white/80 px-4 py-2 text-base shadow-inner shadow-[#f3ead9]"
+          />
+        </label>
+
+        <div className="flex gap-3 justify-end">
+          <button
+            onClick={onClose}
+            disabled={isSubmitting}
+            className="rounded-xl border-2 border-[#d2a06f] bg-[#fff9eb] px-5 py-2 text-sm font-semibold text-[#4a2c1f] shadow-[0_3px_0_#c99063] transition hover:-translate-y-0.5 hover:shadow-[0_5px_0_#c99063]"
+          >
+            Отмена
+          </button>
+          <button
+            onClick={() => onSubmit({ username, avatarFile })}
+            disabled={isSubmitting}
+            className="rounded-xl border-2 border-[#d2a06f] bg-[#d26d75] px-5 py-2 text-sm font-semibold text-[#fff9eb] shadow-[0_3px_0_#a9565d] transition hover:-translate-y-0.5 hover:shadow-[0_5px_0_#a9565d]"
+          >
+            {isSubmitting ? "Сохранение..." : "Сохранить"}
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 function DeleteConfirmationModal({
   isOpen,
   isDeleting,
@@ -297,6 +382,10 @@ export default function ProfilePage() {
   // Post deletion state
   const [postToDelete, setPostToDelete] = useState<number | string | null>(null);
   const [isDeletingPost, setIsDeletingPost] = useState(false);
+
+  // Profile editing state
+  const [isEditingProfile, setIsEditingProfile] = useState(false);
+  const [isUpdatingProfile, setIsUpdatingProfile] = useState(false);
 
   const api = process.env.NEXT_PUBLIC_STRAPI_URL || "http://localhost:1337";
 
@@ -431,6 +520,66 @@ export default function ProfilePage() {
       alert("Не удалось удалить пост. Попробуйте позже.");
     } finally {
       setIsDeletingPost(false);
+    }
+  };
+
+  const handleUpdateProfile = async ({ username, avatarFile }: { username: string; avatarFile: File | null }) => {
+    const jwt = localStorage.getItem("jwt");
+    if (!jwt || !user) return;
+
+    setIsUpdatingProfile(true);
+
+    try {
+      let avatarId = user.avatar?.id;
+
+      // 1. Upload avatar if changed
+      if (avatarFile) {
+        const formData = new FormData();
+        formData.append("files", avatarFile);
+
+        const uploadRes = await fetch(`${api}/api/upload`, {
+          method: "POST",
+          headers: {
+            Authorization: `Bearer ${jwt}`,
+          },
+          body: formData,
+        });
+
+        if (!uploadRes.ok) throw new Error("Failed to upload avatar");
+
+        const uploadData = await uploadRes.json();
+        if (uploadData && uploadData[0]) {
+          avatarId = uploadData[0].id;
+        }
+      }
+
+      // 2. Update user
+      const updateRes = await fetch(`${api}/api/users/${user.id}`, {
+        method: "PUT",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${jwt}`,
+        },
+        body: JSON.stringify({
+          username,
+          avatar: avatarId,
+        }),
+      });
+
+      if (!updateRes.ok) throw new Error("Failed to update profile");
+
+      const updatedUser = await updateRes.json();
+      setUser(updatedUser);
+      setIsEditingProfile(false);
+
+      // Update local storage if needed
+      localStorage.setItem("user", JSON.stringify(updatedUser));
+
+    } catch (error) {
+      console.error("Profile update failed", error);
+      alert("Не удалось обновить профиль. Попробуйте снова.");
+    } finally {
+      setIsUpdatingProfile(false);
     }
   };
 
@@ -646,9 +795,6 @@ export default function ProfilePage() {
                 >
                   {user.username}
                 </h1>
-                <p className="text-[#5e4632] mt-1">
-                  Опыт: {user.experience || 0}
-                </p>
                 <div className="mt-4 grid grid-cols-3 gap-3 max-w-md text-center">
                   <div className="rounded-xl border-2 border-[#d2a06f] bg-white/80 py-2 shadow-[0_2px_0_#c99063]">
                     <div className="text-xl font-bold">{cardsTotal}</div>
@@ -661,13 +807,22 @@ export default function ProfilePage() {
                 </div>
               </div>
             </div>
-            <button
-              type="button"
-              onClick={handleLogout}
-              className="px-4 py-2 rounded-xl border-2 border-[#d2a06f] bg-[#d26d75] text-[#fff9eb] text-sm font-semibold shadow-[0_3px_0_#a9565d] transition hover:-translate-y-0.5 hover:shadow-[0_5px_0_#a9565d]"
-            >
-              Выйти
-            </button>
+            <div className="flex gap-2">
+              <button
+                type="button"
+                onClick={() => setIsEditingProfile(true)}
+                className="px-4 py-2 rounded-xl border-2 border-[#d2a06f] bg-[#fff9eb] text-[#4a2c1f] text-sm font-semibold shadow-[0_3px_0_#c99063] transition hover:-translate-y-0.5 hover:shadow-[0_5px_0_#c99063]"
+              >
+                Ред.
+              </button>
+              <button
+                type="button"
+                onClick={handleLogout}
+                className="px-4 py-2 rounded-xl border-2 border-[#d2a06f] bg-[#d26d75] text-[#fff9eb] text-sm font-semibold shadow-[0_3px_0_#a9565d] transition hover:-translate-y-0.5 hover:shadow-[0_5px_0_#a9565d]"
+              >
+                Выйти
+              </button>
+            </div>
           </div>
         </header>
 
@@ -809,6 +964,16 @@ export default function ProfilePage() {
           onContentChange={setPostContent}
           onVisibilityChange={setPostIsPublic}
           onSubmit={handlePublishPost}
+        />
+      )}
+
+      {isEditingProfile && user && (
+        <ProfileEditModal
+          user={user}
+          apiBase={api}
+          isSubmitting={isUpdatingProfile}
+          onClose={() => setIsEditingProfile(false)}
+          onSubmit={handleUpdateProfile}
         />
       )}
 

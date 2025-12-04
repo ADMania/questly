@@ -84,10 +84,10 @@ export default function Home() {
 
   const questForCard = quest
     ? {
-        ...quest,
-        category: getCategoryLabel(quest.category) || quest.category,
-        difficulty: (difficultyToBadge[quest.difficulty] || "С") as "Л" | "С" | "Т",
-      }
+      ...quest,
+      category: getCategoryLabel(quest.category) || quest.category,
+      difficulty: (difficultyToBadge[quest.difficulty] || "С") as "Л" | "С" | "Т",
+    }
     : null;
 
   const badgeToDifficulty: Record<"Л" | "С" | "Т", "easy" | "medium" | "hard"> = {
@@ -280,10 +280,9 @@ export default function Home() {
           <button
             onClick={() => setSection("about")}
             className={`px-6 py-2 rounded-lg border-2 border-[#d2a06f] bg-[#fff9eb] text-lg font-medium transition-all duration-200
-              ${
-                section === "about"
-                  ? "shadow-[0_3px_0_#c99063,0_4px_6px_rgба(0,0,0,0.15)] scale-105"
-                  : "opacity-80 hover:opacity-100 hover:-translate-y-0.5"
+              ${section === "about"
+                ? "shadow-[0_3px_0_#c99063,0_4px_6px_rgба(0,0,0,0.15)] scale-105"
+                : "opacity-80 hover:opacity-100 hover:-translate-y-0.5"
               }`}
           >
             О проекте
@@ -291,10 +290,9 @@ export default function Home() {
           <button
             onClick={() => setSection("updates")}
             className={`px-6 py-2 rounded-lg border-2 border-[#d2a06f] bg-[#fff9eb] text-lg font-medium transition-all duration-200
-              ${
-                section === "updates"
-                  ? "shadow-[0_3px_0_#c99063,0_4px_6px_rgба(0,0,0,0.15)] scale-105"
-                  : "opacity-80 hover:opacity-100 hover:-translate-y-0.5"
+              ${section === "updates"
+                ? "shadow-[0_3px_0_#c99063,0_4px_6px_rgба(0,0,0,0.15)] scale-105"
+                : "opacity-80 hover:opacity-100 hover:-translate-y-0.5"
               }`}
           >
             Обновления
@@ -339,6 +337,16 @@ export default function Home() {
 
         {section === "updates" && (
           <div className="space-y-6 text-center animate-fadeIn">
+            <div className="rounded-xl border-2 border-[#d2a06f] bg-[#fff9eb] shadow-[0_4px_0_#c99063,0_6px_8px_rgба(0,0,0,0.15)] p-6">
+              <h3 className="text-2xl font-semibold mb-3 text-[#c57758]">
+                Версия 1.3 — декабрь 2025
+              </h3>
+              <ul className="text-lg leading-relaxed space-y-1">
+                <li>• Система профилей и постов</li>
+                <li>• Возможность сохранить карточку в профиль</li>
+                <li>• Общая лента активности</li>
+              </ul>
+            </div>
             <div className="rounded-xl border-2 border-[#d2a06f] bg-[#fff9eb] shadow-[0_4px_0_#c99063,0_6px_8px_rgба(0,0,0,0.15)] p-6">
               <h3 className="text-2xl font-semibold mb-3 text-[#c57758]">
                 Версия 1.2 — октябрь 2025

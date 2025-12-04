@@ -22,7 +22,7 @@ const inputClasses =
 
 export default function RegisterPage() {
   const router = useRouter();
-  
+
   const [form, setForm] = useState(initialForm);
   const [isLoading, setIsLoading] = useState(false);
   const [message, setMessage] = useState<MessageState | null>(null);
@@ -203,11 +203,11 @@ export default function RegisterPage() {
 
                   <div className="rounded-2xl border-2 border-[#d2a06f]/60 bg-white/80 p-4 text-xs text-[#5e4632]/80">
                     Регистрируясь, вы соглашаетесь с нашей{" "}
-                    <Link href="/legal/terms" className="font-semibold text-[#d26d75] underline-offset-4 hover:underline">
+                    <Link href="/terms" className="font-semibold text-[#d26d75] underline-offset-4 hover:underline">
                       политикой использования
                     </Link>{" "}
                     и{" "}
-                    <Link href="/legal/privacy" className="font-semibold text-[#d26d75] underline-offset-4 hover:underline">
+                    <Link href="/privacy" className="font-semibold text-[#d26d75] underline-offset-4 hover:underline">
                       политикой конфиденциальности
                     </Link>
                     .
@@ -217,11 +217,10 @@ export default function RegisterPage() {
                     <div
                       role="alert"
                       aria-live="polite"
-                      className={`rounded-2xl border-2 px-4 py-3 text-sm font-medium shadow-[0_3px_0_#c99063] ${
-                        message.type === "success"
+                      className={`rounded-2xl border-2 px-4 py-3 text-sm font-medium shadow-[0_3px_0_#c99063] ${message.type === "success"
                           ? "border-[#77c97e] bg-[#e3f8e7] text-[#2f7a3b]"
                           : "border-[#e28b82] bg-[#fde7e5] text-[#b73d3d]"
-                      }`}
+                        }`}
                     >
                       {message.text}
                     </div>

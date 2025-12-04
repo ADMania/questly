@@ -1,4 +1,5 @@
 import "../styles/globals.css";
+import Link from "next/link";
 import type { Metadata } from "next";
 import Script from "next/script";
 import AppHeader from "@/components/AppHeader";
@@ -7,9 +8,40 @@ export const metadata: Metadata = {
   title: "Questly — Генератор приключений",
   description:
     "Questly — онлайн генератор случайных заданий и квестов. Креативные, ночные, дневные, социальные и домашние приключения для вдохновения и развлечений.",
+  applicationName: "Questly",
+  authors: [{ name: "Infera", url: "https://questly.site" }],
+  keywords: [
+    "квесты", "задания", "челленджи", "приключения", "игра", "развлечения",
+    "генератор квестов", "генератор заданий", "random quest", "случайные задания"
+  ],
+  metadataBase: new URL("https://questly.site"),
+  openGraph: {
+    title: "Questly — Твоя коллекция приключений",
+    description: "Генератор случайных квестов и заданий. Выходи из рутины и коллекционируй впечатления!",
+    url: "https://questly.site",
+    siteName: "Questly",
+    locale: "ru_RU",
+    type: "website",
+    images: [
+      {
+        url: "/og-image.png", // We will need to create this or ensure it exists
+        width: 1200,
+        height: 630,
+        alt: "Questly Preview",
+      },
+    ],
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: "Questly — Генератор приключений",
+    description: "Случайные задания для тебя и друзей. Попробуй что-то новое!",
+    images: ["/og-image.png"],
+  },
   icons: {
     icon: "/favicon.svg",
+    apple: "/apple-touch-icon.png", // Recommended to add
   },
+  manifest: "/manifest.json",
 };
 
 export default function RootLayout({
@@ -85,6 +117,14 @@ export default function RootLayout({
           >
             infera-sys@yandex.ru
           </a>
+          <div className="mt-2 space-x-4">
+            <Link href="/privacy" className="underline-offset-2 hover:underline">
+              Политика конфиденциальности
+            </Link>
+            <Link href="/terms" className="underline-offset-2 hover:underline">
+              Пользовательское соглашение
+            </Link>
+          </div>
         </footer>
       </body>
     </html>
