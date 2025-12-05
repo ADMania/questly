@@ -5,7 +5,7 @@ import BackgroundGrid from "@/components/BackgroundGrid";
 import PostCard, { FeedPost } from "@/components/feed/PostCard";
 import { getCategoryLabel, getCategoryLabelOrFallback } from "@/lib/categories";
 
-const API_BASE = (process.env.NEXT_PUBLIC_STRAPI_URL || "http://localhost:1337").replace(/\/+$/, "");
+const API_BASE = "";
 
 const filters = [
   { key: "all", label: "Все" },
