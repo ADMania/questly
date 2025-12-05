@@ -127,7 +127,7 @@ export default function FeedPage() {
           headers["Authorization"] = `Bearer ${jwt}`;
         }
 
-        const response = await fetch(`/cms/api/posts?${params.toString()}`, {
+        const response = await fetch(`/api/posts?${params.toString()}`, {
           cache: "no-store",
           headers,
         });

@@ -4,8 +4,12 @@ export default {
   async rewrites() {
     return [
       {
-        source: "/cms/:path*",
-        destination: `${STRAPI_BASE_URL}/:path*`
+        source: "/api/:path*",
+        destination: `${STRAPI_BASE_URL}/api/:path*`
+      },
+      {
+        source: "/uploads/:path*",
+        destination: `${STRAPI_BASE_URL}/uploads/:path*`
       }
     ];
   },

@@ -88,7 +88,7 @@ export default function PostCard({ post, onDelete, readOnly = false }: PostCardP
 
         try {
             const voteId = post.documentId || post.id;
-            const res = await fetch(`${process.env.NEXT_PUBLIC_STRAPI_URL}/api/vote/${voteId}`, {
+            const res = await fetch(`${process.env.NEXT_PUBLIC_STRAPI_URL || ""}/api/vote/${voteId}`, {
                 method: "PUT",
                 headers: {
                     "Content-Type": "application/json",
@@ -120,7 +120,7 @@ export default function PostCard({ post, onDelete, readOnly = false }: PostCardP
         try {
             // Use documentId if available, otherwise fallback to id
             const identifier = post.documentId || post.id;
-            const url = `${process.env.NEXT_PUBLIC_STRAPI_URL}/api/comments/post/${identifier}`;
+            const url = `${process.env.NEXT_PUBLIC_STRAPI_URL || ""}/api/comments/post/${identifier}`;
             const response = await fetch(url);
             const data = await response.json();
             console.log("[PostCard] Comments data:", data);
@@ -154,7 +154,7 @@ export default function PostCard({ post, onDelete, readOnly = false }: PostCardP
                 return;
             }
 
-            const response = await fetch(`${process.env.NEXT_PUBLIC_STRAPI_URL}/api/comments`, {
+            const response = await fetch(`${process.env.NEXT_PUBLIC_STRAPI_URL || ""}/api/comments`, {
                 method: "POST",
                 headers: {
                     "Content-Type": "application/json",
@@ -344,7 +344,7 @@ export default function PostCard({ post, onDelete, readOnly = false }: PostCardP
                                                 <div className="w-6 h-6 rounded-full border border-[#d2a06f] bg-[#f2e3bf] overflow-hidden flex-shrink-0">
                                                     {comment.author?.avatar?.url ? (
                                                         <img
-                                                            src={`${process.env.NEXT_PUBLIC_STRAPI_URL}${comment.author.avatar.url}`}
+                                                            src={`${process.env.NEXT_PUBLIC_STRAPI_URL || ""}${comment.author.avatar.url}`}
                                                             alt={comment.author.username}
                                                             className="w-full h-full object-cover"
                                                         />

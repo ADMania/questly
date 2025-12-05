@@ -451,7 +451,7 @@ export default function ProfilePage() {
     setPostError(null);
 
     try {
-      const res = await fetch("/cms/api/posts", {
+      const res = await fetch("/api/posts", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -504,7 +504,7 @@ export default function ProfilePage() {
     setIsDeletingPost(true);
 
     try {
-      const res = await fetch(`/cms/api/posts/${postToDelete}`, {
+      const res = await fetch(`/api/posts/${postToDelete}`, {
         method: "DELETE",
         headers: {
           Authorization: `Bearer ${jwt}`,
@@ -541,7 +541,7 @@ export default function ProfilePage() {
         const formData = new FormData();
         formData.append("files", avatarFile);
 
-        const uploadRes = await fetch("/cms/api/upload", {
+        const uploadRes = await fetch("/api/upload", {
           method: "POST",
           headers: {
             Authorization: `Bearer ${jwt}`,
@@ -558,7 +558,7 @@ export default function ProfilePage() {
       }
 
       // 2. Update user
-      const updateRes = await fetch(`/cms/api/users/${user.id}`, {
+      const updateRes = await fetch(`/api/users/${user.id}`, {
         method: "PUT",
         headers: {
           "Content-Type": "application/json",
@@ -601,7 +601,7 @@ export default function ProfilePage() {
       params.append("pagination[pageSize]", String(cardsPageSize));
       params.append("sort", "createdAt:desc");
 
-      const res = await fetch(`/cms/api/cards/mine?${params.toString()}`, {
+      const res = await fetch(`/api/cards/mine?${params.toString()}`, {
         headers: { Authorization: `Bearer ${jwt}` },
       });
 
@@ -683,7 +683,7 @@ export default function ProfilePage() {
 
     const init = async () => {
       try {
-        const meRes = await fetch("/cms/api/me", {
+        const meRes = await fetch("/api/me", {
           headers: { Authorization: `Bearer ${jwt}` },
         });
 
@@ -706,7 +706,7 @@ export default function ProfilePage() {
         postParams.append("sort", "createdAt:desc");
         postParams.append("populate[attached_card][populate]", "categories");
 
-        const postsRes = await fetch(`/cms/api/posts?${postParams.toString()}`, {
+        const postsRes = await fetch(`/api/posts?${postParams.toString()}`, {
           headers: { Authorization: `Bearer ${jwt}` },
         });
 

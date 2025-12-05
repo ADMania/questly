@@ -45,7 +45,7 @@ export default function Home() {
       setShowAuthPrompt(false);
       const params = new URLSearchParams();
       if (category) params.set("category", category);
-      const url = `/cms/api/quests/generate${params.size ? `?${params.toString()}` : ""}`;
+      const url = `/api/quests/generate${params.size ? `?${params.toString()}` : ""}`;
 
       const res = await fetch(url, { cache: "no-store" });
       if (!res.ok) {
@@ -113,7 +113,7 @@ export default function Home() {
     setCardActionError(null);
 
     try {
-      const res = await fetch("/cms/api/cards", {
+      const res = await fetch("/api/cards", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
