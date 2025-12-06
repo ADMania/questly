@@ -49,6 +49,6 @@ yarn-error.log*
 *.tsbuildinfo
 
 # Temporary / Legacy / Jungle
-backend_legacy/
+
 response*.json
 docker-compose.old.yml

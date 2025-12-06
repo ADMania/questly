@@ -16,37 +16,42 @@ export default async function AdminPostsPage() {
 
     return (
         <div>
-            <h2 className="text-3xl font-bold mb-6">Управление постами</h2>
+            <header className="mb-8">
+                <h2 className="text-3xl font-extrabold text-[#d26d75] mb-2" style={{ textShadow: "0 2px 3px rgba(0,0,0,0.15)" }}>
+                    Управление постами
+                </h2>
+                <p className="text-[#5e4632]">Модерируйте контент, созданный пользователями.</p>
+            </header>
 
             <PostCreateForm authors={userOptions} cards={cardOptions} />
 
-            <div className="bg-white rounded-lg shadow-md overflow-hidden">
+            <div className="rounded-2xl border-2 border-[#d2a06f] bg-[#fff9eb] overflow-hidden shadow-[0_4px_0_#c99063]">
                 <table className="w-full text-left border-collapse">
-                    <thead className="bg-[#f0eadd]">
+                    <thead className="bg-[#f2e3bf] text-[#5e4632] border-b-2 border-[#d2a06f]">
                         <tr>
-                            <th className="p-4 border-b font-semibold">ID</th>
-                            <th className="p-4 border-b font-semibold">Заголовок</th>
-                            <th className="p-4 border-b font-semibold">Автор</th>
-                            <th className="p-4 border-b font-semibold">Квест</th>
-                            <th className="p-4 border-b font-semibold">Действия</th>
+                            <th className="p-4 font-bold uppercase text-xs tracking-wider">ID</th>
+                            <th className="p-4 font-bold uppercase text-xs tracking-wider">Заголовок</th>
+                            <th className="p-4 font-bold uppercase text-xs tracking-wider">Автор</th>
+                            <th className="p-4 font-bold uppercase text-xs tracking-wider">Квест</th>
+                            <th className="p-4 font-bold uppercase text-xs tracking-wider">Действия</th>
                         </tr>
                     </thead>
-                    <tbody>
+                    <tbody className="divide-y divide-[#eaddcf]">
                         {posts.map((post) => (
-                            <tr key={post.id} className="hover:bg-gray-50">
-                                <td className="p-4 border-b text-gray-600">#{post.id}</td>
-                                <td className="p-4 border-b font-medium">{post.title}</td>
-                                <td className="p-4 border-b text-sm">{post.author?.username}</td>
-                                <td className="p-4 border-b text-sm text-gray-500">
-                                    {post.attachedCard?.slug}
+                            <tr key={post.id} className="hover:bg-[#fffdf5] transition-colors">
+                                <td className="p-4 text-[#8c6b54] font-mono text-sm">#{post.id}</td>
+                                <td className="p-4 font-medium text-[#3c2415]">{post.title}</td>
+                                <td className="p-4 text-sm font-semibold text-[#5e4632]">{post.author?.username}</td>
+                                <td className="p-4 text-sm text-[#8c6b54] font-mono">
+                                    {post.attachedCard?.slug || '—'}
                                 </td>
-                                <td className="p-4 border-b">
+                                <td className="p-4">
                                     <DeletePostButton id={post.id} />
                                 </td>
                             </tr>
                         ))}
                         {posts.length === 0 && (
-                            <tr><td colSpan={5} className="p-6 text-center text-gray-500">Постов нет.</td></tr>
+                            <tr><td colSpan={5} className="p-8 text-center text-[#8c6b54]">Постов нет.</td></tr>
                         )}
                     </tbody>
                 </table>

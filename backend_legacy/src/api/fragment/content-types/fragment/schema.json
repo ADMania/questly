@@ -1,0 +1,49 @@
+{
+  "kind": "collectionType",
+  "collectionName": "fragments",
+  "info": {
+    "singularName": "fragment",
+    "pluralName": "fragments",
+    "displayName": "Fragment"
+  },
+  "options": {
+    "draftAndPublish": true
+  },
+  "pluginOptions": {},
+  "attributes": {
+    "code": {
+      "type": "string",
+      "required": true,
+      "unique": true
+    },
+    "text": {
+      "type": "string",
+      "required": true,
+      "unique": false
+    },
+    "slot": {
+      "type": "enumeration",
+      "enum": [
+        "action",
+        "place",
+        "object"
+      ]
+    },
+    "weight": {
+      "type": "integer",
+      "default": 1
+    },
+    "categories": {
+      "type": "relation",
+      "relation": "manyToMany",
+      "target": "api::category.category",
+      "mappedBy": "fragments"
+    },
+    "difficulties": {
+      "type": "relation",
+      "relation": "manyToMany",
+      "target": "api::difficulty.difficulty",
+      "mappedBy": "fragments"
+    }
+  }
+}

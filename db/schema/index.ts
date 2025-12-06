@@ -43,6 +43,39 @@ export const cardsToCategories = sqliteTable("cards_to_categories", {
     categoryId: integer("category_id").references(() => categories.id).notNull(),
 });
 
+export const questActions = sqliteTable("quest_action", {
+    id: integer("id").primaryKey(),
+    text: text("text").notNull(),
+    weight: integer("weight").default(1),
+});
+
+export const actionsToCategories = sqliteTable("actions_to_categories", {
+    actionId: integer("action_id").references(() => questActions.id).notNull(),
+    categoryId: integer("category_id").references(() => categories.id).notNull(),
+});
+
+export const questPlaces = sqliteTable("quest_place", {
+    id: integer("id").primaryKey(),
+    text: text("text").notNull(),
+    weight: integer("weight").default(1),
+});
+
+export const placesToCategories = sqliteTable("places_to_categories", {
+    placeId: integer("place_id").references(() => questPlaces.id).notNull(),
+    categoryId: integer("category_id").references(() => categories.id).notNull(),
+});
+
+export const questObjects = sqliteTable("quest_object", {
+    id: integer("id").primaryKey(),
+    text: text("text").notNull(),
+    weight: integer("weight").default(1),
+});
+
+export const objectsToCategories = sqliteTable("objects_to_categories", {
+    objectId: integer("object_id").references(() => questObjects.id).notNull(),
+    categoryId: integer("category_id").references(() => categories.id).notNull(),
+});
+
 export const comments = sqliteTable("comment", {
     id: integer("id").primaryKey(),
     content: text("content").notNull(),

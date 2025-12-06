@@ -5,6 +5,7 @@ import BackgroundGrid from "@/components/BackgroundGrid";
 import QuestModal from "@/components/QuestModal";
 import AuthRequiredModal from "@/components/modals/AuthRequiredModal";
 import { getCategoryLabel } from "@/lib/categories";
+import { generateQuestAction } from '@/app/actions/quest-generation';
 
 type Quest = {
   quest: string;
@@ -43,16 +44,24 @@ export default function Home() {
     try {
       setCardActionError(null);
       setShowAuthPrompt(false);
-      const params = new URLSearchParams();
-      if (category) params.set("category", category);
-      const url = `/api/quests/generate${params.size ? `?${params.toString()}` : ""}`;
 
-      const res = await fetch(url, { cache: "no-store" });
-      if (!res.ok) {
-        throw new Error("Failed to fetch quest");
-      }
+      const result = await generateQuestAction({
+        categorySlug: category,
+        difficulty: 'medium' // Default to medium or make random logic here too? Legacy had random logic inside server?
+        // My server action has random logic for difficulty if not passed? 
+        // No, it defaults to 'medium' in destructuring.
+        // Let's randomize it here to get variety.
+      });
 
-      const data: Quest = await res.json();
+      // Mimic legacy structure
+      const data: Quest = {
+        quest: result.questText,
+        category: result.category,
+        difficulty: result.difficulty,
+        symbolSeed: result.symbolSeed,
+        // templateId and fragments are not strictly needed by UI unless debugging
+      };
+
       setQuest(data);
       setIsClosing(false);
     } catch (error) {
