@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { eq } from "drizzle-orm";
 import { db } from "@/lib/db";
 import { users } from "@/db/schema";
-import { generateAuthToken, hashPassword } from "@/lib/auth";
+import { AUTH_COOKIE_NAME, TOKEN_TTL_SECONDS, generateAuthToken, hashPassword } from "@/lib/auth";
 
 export async function POST(request: Request) {
   try {
@@ -87,7 +87,7 @@ export async function POST(request: Request) {
 
     const jwt = generateAuthToken(newUser.id);
 
-    return NextResponse.json(
+    const response = NextResponse.json(
       {
         jwt,
         user: {
@@ -95,10 +95,21 @@ export async function POST(request: Request) {
           username: newUser.username,
           email: newUser.email,
           avatarUrl: newUser.avatarUrl,
+          isAdmin: false,
         },
       },
       { status: 201 },
     );
+    response.cookies.set({
+      name: AUTH_COOKIE_NAME,
+      value: jwt,
+      httpOnly: true,
+      sameSite: "lax",
+      secure: process.env.NODE_ENV === "production",
+      maxAge: TOKEN_TTL_SECONDS,
+      path: "/",
+    });
+    return response;
   } catch (error) {
     console.error("Register failed:", error);
     return NextResponse.json(

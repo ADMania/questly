@@ -16,40 +16,52 @@ export default function UserCreateForm() {
     }
 
     return (
-        <div className="bg-white p-6 rounded-lg shadow-md mb-8">
-            <h3 className="text-xl font-bold mb-4">Добавить пользователя</h3>
-            <form ref={formRef} action={clientAction} className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                <div>
-                    <label className="block text-sm font-medium mb-1">Username</label>
+        <div className="rounded-2xl border-2 border-[#d2a06f] bg-[#fff9eb] p-6 shadow-[0_4px_0_#c99063] mb-8">
+            <h3 className="text-xl font-extrabold mb-4 text-[#d26d75]">Добавить пользователя</h3>
+            <form ref={formRef} action={clientAction} className="grid grid-cols-1 md:grid-cols-4 gap-4">
+                <label className="flex flex-col gap-2 text-sm font-semibold text-[#5e4632]">
+                    Username
                     <input
                         type="text"
                         name="username"
                         required
-                        className="w-full px-4 py-2 border rounded focus:ring-2 focus:ring-[#d2a06f] outline-none"
+                        className="rounded-xl border-2 border-[#d2a06f] bg-white px-4 py-3 text-sm"
                     />
-                </div>
-                <div>
-                    <label className="block text-sm font-medium mb-1">Email</label>
+                </label>
+
+                <label className="flex flex-col gap-2 text-sm font-semibold text-[#5e4632]">
+                    Email
                     <input
                         type="email"
                         name="email"
                         required
-                        className="w-full px-4 py-2 border rounded focus:ring-2 focus:ring-[#d2a06f] outline-none"
+                        className="rounded-xl border-2 border-[#d2a06f] bg-white px-4 py-3 text-sm"
                     />
-                </div>
-                <div>
-                    <label className="block text-sm font-medium mb-1">Password</label>
+                </label>
+
+                <label className="flex flex-col gap-2 text-sm font-semibold text-[#5e4632]">
+                    Пароль
                     <input
                         type="password"
                         name="password"
                         required
-                        className="w-full px-4 py-2 border rounded focus:ring-2 focus:ring-[#d2a06f] outline-none"
+                        className="rounded-xl border-2 border-[#d2a06f] bg-white px-4 py-3 text-sm"
                     />
-                </div>
-                <div className="md:col-span-3">
+                </label>
+
+                <label className="flex items-center gap-3 text-sm font-semibold text-[#5e4632]">
+                    <input
+                        type="checkbox"
+                        name="isAdmin"
+                        className="h-4 w-4 rounded border-[#d2a06f]"
+                    />
+                    Администратор
+                </label>
+
+                <div className="md:col-span-4">
                     <button
                         type="submit"
-                        className="bg-[#d2a06f] text-white px-6 py-2 rounded hover:bg-[#b8865c] transition font-medium"
+                        className="rounded-xl border-2 border-[#d2a06f] bg-[#d26d75] px-6 py-2 text-sm font-semibold text-[#fff9eb] shadow-[0_3px_0_#a9565d]"
                     >
                         Создать
                     </button>

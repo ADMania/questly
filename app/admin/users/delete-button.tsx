@@ -10,7 +10,7 @@ export default function DeleteUserButton({ id }: { id: number }) {
                     await deleteUser(id);
                 }
             }}
-            className="text-red-500 hover:text-red-700 text-sm font-medium"
+            className="w-full rounded-lg border-2 border-transparent px-3 py-1 text-sm font-semibold text-[#b73d3d] hover:border-[#f5c0c0] hover:bg-[#fff1f1]"
         >
             Удалить
         </button>

@@ -15,6 +15,13 @@
       "when": 1765186735777,
       "tag": "0001_even_screwball",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1765187600000,
+      "tag": "0002_admin_access",
+      "breakpoints": true
     }
   ]
 }

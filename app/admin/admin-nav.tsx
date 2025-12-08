@@ -5,10 +5,11 @@ import { usePathname } from "next/navigation";
 
 const navItems = [
     { href: "/admin", label: "Dashboard" },
+    { href: "/admin/quests", label: "Квесты" },
     { href: "/admin/cards", label: "Карточки" },
-    { href: "/admin/fragments", label: "Генератор" },
     { href: "/admin/posts", label: "Посты" },
     { href: "/admin/users", label: "Пользователи" },
+    { href: "/admin/media", label: "Медиа" },
 ];
 
 export default function AdminNav() {

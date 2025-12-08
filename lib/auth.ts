@@ -1,8 +1,9 @@
 import { createHmac, randomBytes, scryptSync, timingSafeEqual } from "node:crypto";
 
 const KEY_LENGTH = 64;
-const TOKEN_TTL_SECONDS = parseInt(process.env.AUTH_TOKEN_TTL ?? "", 10) || 60 * 60 * 24 * 7; // 7 days
+export const TOKEN_TTL_SECONDS = parseInt(process.env.AUTH_TOKEN_TTL ?? "", 10) || 60 * 60 * 24 * 7; // 7 days
 const AUTH_SECRET = process.env.AUTH_SECRET || "questly-dev-secret";
+export const AUTH_COOKIE_NAME = "questly-token";
 
 type TokenPayload = {
   sub: number;

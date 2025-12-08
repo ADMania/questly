@@ -1,11 +1,13 @@
 import { NextResponse } from "next/server";
+import { eq } from "drizzle-orm";
 import { db } from "@/lib/db";
 import { users } from "@/db/schema";
-import { eq } from "drizzle-orm";
-import { generateAuthToken, verifyPassword } from "@/lib/auth";
+import { AUTH_COOKIE_NAME, TOKEN_TTL_SECONDS, generateAuthToken, verifyPassword } from "@/lib/auth";
+import { ensureDefaultAdmin } from "@/lib/admin";
 
 export async function POST(request: Request) {
   try {
+    await ensureDefaultAdmin();
     const { identifier, password } = await request.json();
 
     if (typeof identifier !== "string" || typeof password !== "string") {
@@ -57,8 +59,7 @@ export async function POST(request: Request) {
     }
 
     const jwt = generateAuthToken(userRecord.id);
-
-    return NextResponse.json(
+    const response = NextResponse.json(
       {
         jwt,
         user: {
@@ -66,10 +67,21 @@ export async function POST(request: Request) {
           username: userRecord.username,
           email: userRecord.email,
           avatarUrl: userRecord.avatarUrl,
+          isAdmin: Boolean(userRecord.isAdmin),
         },
       },
       { status: 200 },
     );
+    response.cookies.set({
+      name: AUTH_COOKIE_NAME,
+      value: jwt,
+      httpOnly: true,
+      sameSite: "lax",
+      secure: process.env.NODE_ENV === "production",
+      maxAge: TOKEN_TTL_SECONDS,
+      path: "/",
+    });
+    return response;
   } catch (error) {
     console.error("Login failed:", error);
     return NextResponse.json(

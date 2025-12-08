@@ -59,6 +59,9 @@ export async function getAdminPosts() {
             id: posts.id,
             title: posts.title,
             content: posts.content,
+            isPublic: posts.isPublic,
+            authorId: posts.authorId,
+            cardId: posts.attachedCardId,
             author: {
                 id: users.id,
                 username: users.username,
@@ -75,7 +78,10 @@ export async function getAdminPosts() {
             .leftJoin(cards, eq(posts.attachedCardId, cards.id))
             .orderBy(desc(posts.id));
 
-        return allPosts;
+        return allPosts.map((post) => ({
+            ...post,
+            isPublic: Boolean(post.isPublic),
+        }));
     } catch (e) {
         console.error("Failed to get admin posts", e);
         return [];
@@ -118,5 +124,37 @@ export async function deletePost(id: number) {
     } catch (error) {
         console.error('Failed to delete post:', error);
         return { error: 'Failed to delete post' };
+    }
+}
+
+export async function updatePost(payload: {
+    id: number;
+    title: string;
+    content: string;
+    authorId: number;
+    cardId: number | null;
+    isPublic: boolean;
+}) {
+    if (!payload.title || !payload.content) {
+        return { error: 'Требуются заголовок и текст' };
+    }
+
+    try {
+        await db
+            .update(posts)
+            .set({
+                title: payload.title,
+                content: payload.content,
+                authorId: payload.authorId,
+                attachedCardId: payload.cardId,
+                isPublic: payload.isPublic,
+            })
+            .where(eq(posts.id, payload.id));
+        revalidatePath('/admin/posts');
+        revalidatePath('/feed');
+        return { success: true };
+    } catch (error) {
+        console.error('Failed to update post:', error);
+        return { error: 'Не удалось обновить пост' };
     }
 }

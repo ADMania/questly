@@ -1,16 +1,16 @@
 'use client';
 
-import { createFragment } from '@/app/actions/fragments';
+import { createQuest } from '@/app/actions/quests';
 import { CATEGORY_LABELS } from '@/lib/categories';
 import { useRef } from 'react';
 
 const categoryOptions = Object.entries(CATEGORY_LABELS);
 
-export default function FragmentCreateForm() {
+export default function QuestCreateForm() {
     const formRef = useRef<HTMLFormElement>(null);
 
     async function clientAction(formData: FormData) {
-        const result = await createFragment(formData);
+        const result = await createQuest(formData);
         if (result?.success) {
             formRef.current?.reset();
         } else if (result?.error) {
@@ -24,13 +24,13 @@ export default function FragmentCreateForm() {
             <form ref={formRef} action={clientAction} className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <div className="md:col-span-2">
                     <label className="block text-sm font-bold text-[#5e4632] mb-2">Текст</label>
-                    <input
-                        type="text"
+                    <textarea
                         name="text"
                         required
-                        placeholder="Например: 'устроить дружеский пикник во дворе'"
-                        className="w-full px-4 py-3 rounded-xl border-2 border-[#d2a06f] bg-white focus:bg-[#fffcf5] outline-none transition text-[#3c2415] placeholder-[#9ca3af]"
-                    />
+                        rows={3}
+                        placeholder="Например: устроить дружеский пикник во дворе"
+                        className="w-full px-4 py-3 rounded-xl border-2 border-[#d2a06f] bg-white focus:bg-[#fffcf5] outline-none transition text-[#3c2415] placeholder-[#9ca3af] resize-none"
+                    ></textarea>
                 </div>
 
                 <div>

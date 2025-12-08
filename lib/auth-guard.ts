@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { eq } from "drizzle-orm";
-import { verifyAuthToken } from "@/lib/auth";
+import { verifyAuthToken, AUTH_COOKIE_NAME } from "@/lib/auth";
 import { db } from "@/lib/db";
 import { users } from "@/db/schema";
 
@@ -9,6 +9,7 @@ export type AuthenticatedUser = {
   username: string;
   email: string;
   avatarUrl: string | null;
+  isAdmin: boolean;
 };
 
 export const unauthorized = () =>
@@ -17,7 +18,22 @@ export const unauthorized = () =>
 export async function getUserFromRequest(request: Request): Promise<AuthenticatedUser | null> {
   const header =
     request.headers.get("authorization") || request.headers.get("Authorization") || "";
-  const token = header?.startsWith("Bearer ") ? header.slice(7).trim() : null;
+  let token = header?.startsWith("Bearer ") ? header.slice(7).trim() : null;
+
+  if (!token) {
+    const cookieHeader = request.headers.get("cookie") || request.headers.get("Cookie") || "";
+    if (cookieHeader) {
+      const cookies = cookieHeader.split(";");
+      for (const cookie of cookies) {
+        const [rawKey, ...rawValue] = cookie.trim().split("=");
+        if (rawKey === AUTH_COOKIE_NAME && rawValue.length > 0) {
+          token = rawValue.join("=");
+          break;
+        }
+      }
+    }
+  }
+
   if (!token) {
     return null;
   }
@@ -33,6 +49,7 @@ export async function getUserFromRequest(request: Request): Promise<Authenticate
       username: users.username,
       email: users.email,
       avatarUrl: users.avatarUrl,
+      isAdmin: users.isAdmin,
     })
     .from(users)
     .where(eq(users.id, payload.sub))
