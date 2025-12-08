@@ -3,6 +3,8 @@ import { cards, posts, questTemplates, users } from "@/db/schema";
 import { db } from "@/lib/db";
 
 async function getCounts() {
+  const parseCount = (rows: Array<{ count: number | string | null }>) =>
+    Number(rows[0]?.count ?? 0);
   try {
     const [usersCount, postsCount, cardsCount, templatesCount] =
       await Promise.all([
@@ -12,10 +14,10 @@ async function getCounts() {
         db.select({ count: sql<number>`count(*)` }).from(questTemplates),
       ]);
     return {
-      users: usersCount[0].count,
-      posts: postsCount[0].count,
-      cards: cardsCount[0].count,
-      quests: templatesCount[0].count,
+      users: parseCount(usersCount),
+      posts: parseCount(postsCount),
+      cards: parseCount(cardsCount),
+      quests: parseCount(templatesCount),
     };
   } catch (_e) {
     return { users: 0, posts: 0, cards: 0, quests: 0 };

@@ -1,17 +1,19 @@
 'use client';
 
 import { createUser } from '@/app/actions/users';
-import { useRef } from 'react';
+import { useRef, useState } from 'react';
 
 export default function UserCreateForm() {
     const formRef = useRef<HTMLFormElement>(null);
+    const [feedback, setFeedback] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
 
     async function clientAction(formData: FormData) {
         const result = await createUser(formData);
         if (result?.success) {
             formRef.current?.reset();
+            setFeedback({ type: 'success', text: 'Пользователь создан.' });
         } else if (result?.error) {
-            alert(result.error);
+            setFeedback({ type: 'error', text: result.error });
         }
     }
 
@@ -65,6 +67,11 @@ export default function UserCreateForm() {
                     >
                         Создать
                     </button>
+                    {feedback && (
+                        <p className={`mt-3 text-sm font-medium ${feedback.type === 'error' ? 'text-[#b73d3d]' : 'text-[#2f7a3b]'}`}>
+                            {feedback.text}
+                        </p>
+                    )}
                 </div>
             </form>
         </div>

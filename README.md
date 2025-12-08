@@ -14,92 +14,88 @@
 
 Проект построен на современном стеке технологий, обеспечивающем производительность и масштабируемость.
 
-### Frontend (`/web`)
-- **Framework**: [Next.js 15](https://nextjs.org/) (App Router)
+### Приложение
+- **Framework**: [Next.js 15](https://nextjs.org/) (App Router + server actions/API routes)
 - **Language**: TypeScript
-- **Styling**: [TailwindCSS](https://tailwindcss.com/)
-- **Animations**: [Framer Motion](https://www.framer.com/motion/)
-- **Tooling**: [Biome](https://biomejs.dev/) (Linting & Formatting)
+- **Styling**: [TailwindCSS](https://tailwindcss.com/) + [Framer Motion](https://www.framer.com/motion/)
+- **Data Layer**: [Drizzle ORM](https://orm.drizzle.team/)
+- **Tooling**: [Biome](https://biomejs.dev/) для форматирования и линтинга
 
-### Backend (`/backend`)
-- **CMS**: [Strapi 5](https://strapi.io/) (Headless CMS)
-- **Database**: PostgreSQL
-- **Language**: TypeScript
-
-### Infrastructure
-- **Containerization**: Docker & Docker Compose
-- **Server**: Nginx / Caddy (в продакшене)
+### Данные и инфраструктура
+- **Database**: SQLite (файл `dev.db`) в разработке, PostgreSQL 15+ в продакшене
+- **Migrations**: drizzle-kit (`npm run db:push`, задайте `DRIZZLE_DIALECT=postgres` для генерации продовых миграций)
+- **Containerization**: Docker (multi-stage image) + Docker Compose/any orchestrator
+- **Reverse proxy**: Nginx / Caddy на проде (по желанию)
 
 ## 🏁 Начало работы
 
 ### Предварительные требования
 
-- [Node.js](https://nodejs.org/) (версия 18 или выше)
-- [Docker](https://www.docker.com/) и Docker Compose
+- [Node.js](https://nodejs.org/) 18+
+- Локальный экземпляр PostgreSQL 15+ (можно через Docker)
+- [Docker](https://www.docker.com/) / Docker Compose — для развёртывания и удобного запуска
 
-### 🐳 Запуск с помощью Docker (Рекомендуется)
+### 🐳 Запуск с помощью Docker
 
-Этот метод автоматически поднимает базу данных, бэкенд и фронтенд.
-
-1. **Клонируйте репозиторий:**
+1. **Клонируйте репозиторий и настройте `.env`:**
    ```bash
    git clone <repository-url>
    cd questly
+   cp .env.example .env
    ```
+   Обновите `DATABASE_URL`, `AUTH_SECRET` и админские креды. Значения `POSTGRES_*` используются docker-compose для базы данных.
 
-2. **Настройте переменные окружения:**
-   Создайте файл `.env` в корне проекта, используя пример:
+2. **Поднимите базу данных (можно отдельно):**
    ```bash
-   cp .env.production.example .env
+   docker compose up -d postgres
    ```
-   > **Важно:** Обязательно сгенерируйте новые секретные ключи (JWT_SECRET, API_KEYS и т.д.) для безопасности.
 
-3. **Запустите проект:**
+3. **Примените миграции Drizzle (PostgreSQL):**
    ```bash
-   docker-compose up --build
+   DRIZZLE_DIALECT=postgres DATABASE_URL=postgres://questly:questly@localhost:5432/questly npm run db:push
    ```
+   Используйте свой DSN, если вы поменяли логин/пароль.
 
-После запуска сервисы будут доступны по следующим адресам:
-- **Frontend**: [http://localhost:3001](http://localhost:3001)
-- **Strapi Admin Panel**: [http://localhost:1337/admin](http://localhost:1337/admin)
-- **API**: [http://localhost:1337/api](http://localhost:1337/api)
+4. **Соберите и запустите приложение:**
+   ```bash
+   docker compose up --build web
+   ```
+   Next.js будет доступен по адресу [http://localhost:3000](http://localhost:3000).
 
-### 💻 Локальный запуск (для разработки)
+> ⚙️ В production схеме рекомендуется запускать `npm run db:push` в CI/CD перед деплоем контейнера, чтобы структура БД всегда была синхронизирована.
 
-Если вы хотите запустить сервисы по отдельности без Docker (потребуется локальный PostgreSQL).
+> 💡 Чтобы принудительно использовать PostgreSQL в любом окружении (например, в dev), задайте `DATABASE_DIALECT=postgres` и укажите `DATABASE_URL`/`POSTGRES_URL` с подключением к серверу.
 
-#### 1. Backend (Strapi)
+### 💻 Локальный запуск (без Docker для приложения)
 
-```bash
-cd backend
-npm install
-# Убедитесь, что у вас настроен .env с доступом к локальной БД
-npm run develop
-```
-
-#### 2. Frontend (Next.js)
-
-```bash
-cd web
-npm install
-# Убедитесь, что переменные окружения настроены корректно
-npm run dev
-```
+1. Установите зависимости:
+   ```bash
+   npm install
+   ```
+2. По умолчанию `DATABASE_URL="file:./dev.db"` — SQLite создастся автоматически. Если хотите протестировать с PostgreSQL, запустите контейнер и задайте `DRIZZLE_DIALECT=postgres`.
+3. Обновите схему в локальной базе:
+   ```bash
+   npm run db:push
+   ```
+4. Стартуйте dev-сервер:
+   ```bash
+   npm run dev
+   ```
+   Приложение поднимется на [http://localhost:3000](http://localhost:3000).
 
 ## 📂 Структура проекта
 
 ```
 questly/
-├── backend/            # Исходный код Strapi (CMS & API)
-│   ├── config/         # Конфигурация Strapi
-│   ├── src/            # API, контент-типы, плагины
-│   └── public/         # Загруженные файлы (uploads)
-├── web/                # Исходный код Next.js (Frontend)
-│   ├── app/            # Страницы и роутинг (App Router)
-│   ├── components/     # React компоненты
-│   └── lib/            # Утилиты и хуки
-├── docker-compose.yml  # Оркестрация контейнеров
-└── .env.production.example # Пример переменных окружения
+├── app/                # Маршруты, API-роуты и server components
+├── components/         # UI и бизнес-компоненты
+├── db/                 # Схема Drizzle (TypeScript)
+├── drizzle/            # Сгенерированные SQL-миграции
+├── lib/                # Утилиты (auth, db, helpers)
+├── public/             # Статические ассеты и загрузки
+├── backend_legacy/     # Старый Strapi-бэкенд (оставлен для истории)
+├── docker-compose.yml  # Оркестрация Next + PostgreSQL
+└── .env.example        # Базовый шаблон переменных окружения
 ```
 
 ## 🔐 Админская учётная запись
@@ -116,6 +112,7 @@ questly/
 - `/admin/posts` — полный CRUD по постам: привязка автора, карточки, текста и статуса видимости.
 - `/admin/users` — создание, изменение профилей и выдача админских прав, сброс пароля.
 - `/admin/media` — просмотр загруженных файлов из `public/uploads` и удаление лишних ресурсов.
+- `/admin/feedbacks` — входящие сообщения обратной связи с возможностью менять статус.
 
 ## 🤝 Вклад в проект
 

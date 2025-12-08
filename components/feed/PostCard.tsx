@@ -1,11 +1,8 @@
 "use client";
 
-// TODO: Настроить вёрстку под телефоны
-
 import { useState, useRef, useEffect } from "react";
 import AdventureCard from "@/components/cards/AdventureCard";
 import AuthRequiredModal from "@/components/modals/AuthRequiredModal";
-import { motion } from "framer-motion";
 
 type FeedDifficulty = "easy" | "medium" | "hard";
 
@@ -59,6 +56,7 @@ export default function PostCard({ post, onDelete, readOnly = false }: PostCardP
     const [isPostingComment, setIsPostingComment] = useState(false);
     const [showComments, setShowComments] = useState(false);
     const [showAuthModal, setShowAuthModal] = useState(false);
+    const [inlineNotice, setInlineNotice] = useState<{ type: "success" | "error"; text: string } | null>(null);
 
     useEffect(() => {
         setVotes(parseInt(String(post.votes || 0)));
@@ -74,9 +72,10 @@ export default function PostCard({ post, onDelete, readOnly = false }: PostCardP
             return;
         }
 
+        setInlineNotice(null);
         const postId = Number(post.id);
         if (!Number.isFinite(postId)) {
-            alert("Не удалось определить пост для голосования.");
+            setInlineNotice({ type: "error", text: "Не удалось определить пост для голосования." });
             return;
         }
 
@@ -173,9 +172,10 @@ export default function PostCard({ post, onDelete, readOnly = false }: PostCardP
         e.preventDefault();
         if (!commentText.trim()) return;
 
+        setInlineNotice(null);
         const postId = Number(post.id);
         if (!Number.isFinite(postId)) {
-            alert("Не удалось определить пост.");
+            setInlineNotice({ type: "error", text: "Не удалось определить пост." });
             return;
         }
 
@@ -210,9 +210,10 @@ export default function PostCard({ post, onDelete, readOnly = false }: PostCardP
                 fetchComments();
             }
             setCommentText("");
+            setInlineNotice({ type: "success", text: "Комментарий отправлен." });
         } catch (error) {
             console.error("Error posting comment:", error);
-            alert("Не удалось отправить комментарий.");
+            setInlineNotice({ type: "error", text: "Не удалось отправить комментарий." });
         } finally {
             setIsPostingComment(false);
         }
@@ -234,6 +235,13 @@ export default function PostCard({ post, onDelete, readOnly = false }: PostCardP
     return (
         <article className="w-full max-w-2xl mx-auto mb-12">
             <div className="relative rounded-2xl border-2 border-[#d2a06f] bg-[#fff9eb] p-6 shadow-[0_4px_0_#c99063] flex flex-col gap-6">
+                {inlineNotice && (
+                    <div className={`rounded-xl border-2 px-4 py-2 text-sm font-semibold ${inlineNotice.type === "error"
+                        ? "border-[#e28b82] bg-[#fde7e5] text-[#b73d3d]"
+                        : "border-[#77c97e] bg-[#e3f8e7] text-[#2f7a3b]"}`}>
+                        {inlineNotice.text}
+                    </div>
+                )}
                 {/* 1. Author & Content Header */}
                 <div>
                     {/* Author Info */}

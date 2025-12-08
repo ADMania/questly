@@ -69,3 +69,45 @@ export async function deleteQuest(id: number) {
     return { error: 'Failed to delete quest' };
   }
 }
+
+export type BulkQuestRow = {
+  text: string;
+  difficulty?: 'easy' | 'medium' | 'hard';
+  weight?: number;
+  category?: string | null;
+};
+
+export async function bulkCreateQuests(rows: BulkQuestRow[]) {
+  if (!Array.isArray(rows) || rows.length === 0) {
+    return { error: 'Нет данных для импорта' };
+  }
+
+  // Limit to avoid huge payloads and DB locks
+  const max = 1000;
+  const slice = rows.slice(0, max);
+
+  const normalised = slice
+    .map((r) => ({
+      text: String(r.text ?? '').trim(),
+      difficulty: (r.difficulty ?? 'medium') as 'easy' | 'medium' | 'hard',
+      weight: Number.isFinite(r.weight as number) && (r.weight as number)! > 0 ? (r.weight as number) : 1,
+      category: r.category ? String(r.category).trim().toLowerCase() : null,
+    }))
+    .filter((r) => r.text.length > 0);
+
+  if (normalised.length === 0) {
+    return { error: 'После валидации не осталось валидных записей' };
+  }
+
+  // Insert in chunks
+  const chunkSize = 200;
+  let inserted = 0;
+  for (let i = 0; i < normalised.length; i += chunkSize) {
+    const chunk = normalised.slice(i, i + chunkSize);
+    await db.insert(questTemplates).values(chunk);
+    inserted += chunk.length;
+  }
+
+  revalidatePath('/admin/quests');
+  return { success: true, inserted };
+}

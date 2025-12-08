@@ -1,6 +1,7 @@
 import { getQuests } from '@/app/actions/quests';
 import QuestCreateForm from './create-form';
 import QuestTable from './quest-table';
+import BulkUploadQuests from './bulk-upload';
 
 export default async function AdminQuestsPage() {
     const quests = await getQuests();
@@ -16,6 +17,7 @@ export default async function AdminQuestsPage() {
 
             <QuestCreateForm />
             <QuestTable quests={quests} />
+            <BulkUploadQuests />
         </div>
     );
 }

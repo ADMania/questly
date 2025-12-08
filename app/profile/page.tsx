@@ -322,6 +322,7 @@ export default function ProfilePage() {
   // Profile editing state
   const [isEditingProfile, setIsEditingProfile] = useState(false);
   const [isUpdatingProfile, setIsUpdatingProfile] = useState(false);
+  const [profileBanner, setProfileBanner] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
 
   // Feedback state
   const [isFeedbackOpen, setIsFeedbackOpen] = useState(false);
@@ -500,6 +501,7 @@ export default function ProfilePage() {
     }
 
     setIsUpdatingProfile(true);
+    setProfileBanner(null);
 
     try {
       let avatarData: string | null = null;
@@ -538,9 +540,11 @@ export default function ProfilePage() {
       userRef.current = updatedUser;
       localStorage.setItem("user", JSON.stringify(updatedUser));
       setIsEditingProfile(false);
+      setProfileBanner({ type: "success", text: "Профиль обновлён." });
     } catch (error) {
       console.error("Profile update failed", error);
-      alert(error instanceof Error ? error.message : "Не удалось обновить профиль.");
+      const message = error instanceof Error ? error.message : "Не удалось обновить профиль.";
+      setProfileBanner({ type: "error", text: message });
     } finally {
       setIsUpdatingProfile(false);
     }
@@ -870,6 +874,14 @@ export default function ProfilePage() {
             </div>
           </div>
         </header>
+
+        {profileBanner && (
+          <div className={`mb-6 rounded-2xl border-2 px-4 py-3 text-sm font-semibold ${profileBanner.type === 'error'
+            ? 'border-[#e28b82] bg-[#fde7e5] text-[#b73d3d]'
+            : 'border-[#77c97e] bg-[#e3f8e7] text-[#2f7a3b]'}`}>
+            {profileBanner.text}
+          </div>
+        )}
 
         {/* 🧭 Табы */}
         <div className="flex flex-wrap gap-3 mb-6">

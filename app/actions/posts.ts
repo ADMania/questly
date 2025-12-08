@@ -2,7 +2,7 @@
 
 import { db } from '@/lib/db';
 import { posts, users, cards, votes } from '@/db/schema';
-import { eq, desc } from 'drizzle-orm';
+import { desc, eq, inArray, sql } from 'drizzle-orm';
 import { revalidatePath } from 'next/cache';
 import { FeedPost } from '@/components/feed/PostCard';
 import { getCategoryLabel } from '@/lib/categories';
@@ -20,9 +20,30 @@ export async function getFeedPosts(): Promise<FeedPost[]> {
             .where(eq(posts.isPublic, true))
             .orderBy(desc(posts.createdAt));
 
-        const augmentedPosts = await Promise.all(allPosts.map(async (row) => {
-            const postVotes = await db.select().from(votes).where(eq(votes.postId, row.post.id));
-            const voteSum = postVotes.reduce((acc, v) => acc + (v.value || 0), 0);
+        const postIds = allPosts
+            .map((row) => row.post.id)
+            .filter((value): value is number => typeof value === 'number');
+
+        const voteRows = postIds.length
+            ? await db
+                .select({
+                    postId: votes.postId,
+                    total: sql<number>`coalesce(sum(${votes.value}), 0)`,
+                })
+                .from(votes)
+                .where(inArray(votes.postId, postIds))
+                .groupBy(votes.postId)
+            : [];
+
+        const voteMap = new Map<number, number>();
+        voteRows.forEach((row) => {
+            if (typeof row.postId === 'number') {
+                voteMap.set(row.postId, Number(row.total) || 0);
+            }
+        });
+
+        const augmentedPosts = allPosts.map((row) => {
+            const voteSum = row.post.id ? voteMap.get(row.post.id) ?? 0 : 0;
             const primaryCategory = getCategoryLabel(row.card?.category) || 'Личное приключение';
 
             return {
@@ -44,7 +65,7 @@ export async function getFeedPosts(): Promise<FeedPost[]> {
                 votes: voteSum,
                 userVote: null,
             } as FeedPost;
-        }));
+        });
 
         return augmentedPosts;
     } catch (error) {

@@ -1,31 +1,37 @@
 import { drizzle as drizzleSqlite } from "drizzle-orm/better-sqlite3";
 import { drizzle as drizzlePostgres } from "drizzle-orm/postgres-js";
+import type { BetterSQLite3Database } from "drizzle-orm/better-sqlite3";
+import type { PostgresJsDatabase } from "drizzle-orm/postgres-js";
 import Database from "better-sqlite3";
 import postgres from "postgres";
+import { schemaDialect } from "@/db/schema";
 
-// общий интерфейс для совместимости методов
-import type { DrizzleD1Database } from "drizzle-orm/d1";
+type DatabaseInstance = BetterSQLite3Database | PostgresJsDatabase;
 
-const isProd = process.env.NODE_ENV === "production";
+const globalForDb = globalThis as { db?: DatabaseInstance };
 
-const globalForDb = global as unknown as {
-  db: DrizzleD1Database | undefined;
-};
+if (!globalForDb.db) {
+  if (schemaDialect === "postgres") {
+    const connection =
+      process.env.POSTGRES_URL ??
+      (process.env.DATABASE_URL?.startsWith("postgres")
+        ? process.env.DATABASE_URL
+        : undefined);
 
-let dbInstance: any;
+    if (!connection) {
+      throw new Error("POSTGRES_URL (или DATABASE_URL с postgresql) не задан");
+    }
 
-if (isProd) {
-  const url = process.env.POSTGRES_URL;
-  if (!url) throw new Error("POSTGRES_URL is not set");
-
-  const client = postgres(url, { max: 1 });
-  dbInstance = drizzlePostgres(client);
-} else {
-  const sqliteFile = process.env.DATABASE_URL?.replace("file:", "") || "dev.db";
-  const sqlite = new Database(sqliteFile);
-  dbInstance = drizzleSqlite(sqlite);
+    const client = postgres(connection, {
+      max: process.env.NODE_ENV === "production" ? 3 : 1,
+      idle_timeout: 20,
+    });
+    globalForDb.db = drizzlePostgres(client);
+  } else {
+    const sqliteFile = process.env.DATABASE_URL?.replace("file:", "") || "dev.db";
+    const sqlite = new Database(sqliteFile);
+    globalForDb.db = drizzleSqlite(sqlite);
+  }
 }
 
-export const db = (globalForDb.db ?? dbInstance) as unknown as DrizzleD1Database;
-
-if (!isProd) globalForDb.db = db;
+export const db = globalForDb.db;

@@ -10,6 +10,7 @@ const navItems = [
     { href: "/admin/posts", label: "Посты" },
     { href: "/admin/users", label: "Пользователи" },
     { href: "/admin/media", label: "Медиа" },
+    { href: "/admin/feedbacks", label: "Обратная связь" },
 ];
 
 export default function AdminNav() {
