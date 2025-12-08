@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import BackgroundGrid from "@/components/BackgroundGrid";
 import AdventureCard from "@/components/cards/AdventureCard";
@@ -14,11 +14,6 @@ const tabs: { key: "quests" | "activity"; label: string }[] = [
   { key: "activity", label: "Активность" },
 ];
 
-const generateClientId = () =>
-  typeof crypto !== "undefined" && "randomUUID" in crypto
-    ? crypto.randomUUID()
-    : `tmp-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
-
 type Card = {
   id: number | string;
   quest_text: string;
@@ -27,6 +22,13 @@ type Card = {
   primaryCategory: string;
   categories: string[];
   postId: number | string | null;
+};
+
+type ProfileUser = {
+  id: number;
+  username: string;
+  email: string;
+  avatarUrl?: string | null;
 };
 
 interface PostComposerModalProps {
@@ -47,74 +49,6 @@ const DIFFICULTY_LABELS: Record<Card["difficulty"], string> = {
   easy: "Лёгкое приключение",
   medium: "Среднее приключение",
   hard: "Тяжёлое приключение",
-};
-
-const readCategoryEntries = (source: any) => {
-  if (!source) return [];
-  if (Array.isArray(source)) return source;
-  if (Array.isArray(source?.data)) return source.data;
-  return [];
-};
-
-const normalizePostEntry = (entry: any): FeedPost => {
-  const baseEntry = entry?.data ?? entry ?? {};
-  // Strapi 5 returns flattened data, Strapi 4 returns attributes. Handle both.
-  const attributes = baseEntry?.attributes ?? baseEntry;
-
-  const attachedCardData = attributes?.attached_card?.data ?? attributes?.attached_card ?? null;
-  const cardAttributes = attachedCardData?.attributes ?? attachedCardData ?? {};
-
-  const categoriesRaw = readCategoryEntries(cardAttributes?.categories).map((category: any) => {
-    const attr = category?.attributes ?? category ?? {};
-    const value = attr.slug ?? attr.name ?? attr.title ?? "";
-    if (typeof value !== "string" || !value.trim()) {
-      return null;
-    }
-    const label = getCategoryLabel(value);
-    return label || value;
-  });
-
-  const filteredCategories = categoriesRaw.filter((value: unknown): value is string => typeof value === "string" && value.length > 0);
-  const categorySlugs = categoriesRaw.filter((value: unknown): value is string => typeof value === "string" && value.length > 0); // Assuming slugs are same as labels for now or extracted similarly
-
-  const difficultyValue =
-    typeof cardAttributes?.difficulty === "string"
-      ? cardAttributes.difficulty.toLowerCase()
-      : "medium";
-
-  const difficulty: "easy" | "medium" | "hard" = (["easy", "medium", "hard"].includes(difficultyValue)
-    ? difficultyValue
-    : "medium") as "easy" | "medium" | "hard";
-
-  const authorData = attributes?.author?.data ?? attributes?.author;
-  const authorAttributes = authorData?.attributes ?? authorData ?? {};
-  const avatarUrl = authorAttributes?.avatar?.data?.attributes?.url ?? authorAttributes?.avatar?.url;
-  const apiBase = "";
-
-  return {
-    id: baseEntry?.id ?? attributes?.id ?? baseEntry?.documentId ?? generateClientId(),
-    documentId: baseEntry?.documentId,
-    title: typeof attributes?.title === "string" && attributes.title.trim().length > 0 ? attributes.title : "Без названия",
-    content: typeof attributes?.content === "string" ? attributes.content : "",
-    createdAt: typeof attributes?.createdAt === "string" ? attributes.createdAt : null,
-    author: {
-      username: authorAttributes?.username ?? "Я",
-      avatarUrl: avatarUrl ? `${apiBase}${avatarUrl}` : null,
-    },
-    card: {
-      quest: typeof cardAttributes?.quest_text === "string" && cardAttributes?.quest_text.trim().length > 0
-        ? cardAttributes.quest_text
-        : "Приключение",
-      categoryLabel: filteredCategories[0] ?? getCategoryLabelOrFallback(undefined, "Личное приключение"),
-      categorySlugs: categorySlugs,
-      difficulty: difficulty,
-      symbolSeed: typeof cardAttributes?.symbol_seed === "string" && cardAttributes.symbol_seed.length > 0
-        ? cardAttributes.symbol_seed
-        : String(attachedCardData?.id ?? generateClientId()),
-    },
-    votes: attributes?.votes ? parseInt(attributes.votes) : 0,
-    userVote: attributes?.userVote ?? null,
-  };
 };
 
 function PostComposerModal({
@@ -231,13 +165,11 @@ interface DeleteConfirmationModalProps {
 
 function ProfileEditModal({
   user,
-  apiBase,
   isSubmitting,
   onClose,
   onSubmit,
 }: {
-  user: any;
-  apiBase: string;
+  user: ProfileUser;
   isSubmitting: boolean;
   onClose: () => void;
   onSubmit: (data: { username: string; avatarFile: File | null }) => void;
@@ -245,7 +177,7 @@ function ProfileEditModal({
   const [username, setUsername] = useState(user.username);
   const [avatarFile, setAvatarFile] = useState<File | null>(null);
   const [previewUrl, setPreviewUrl] = useState<string | null>(
-    user.avatar?.url ? `${apiBase}${user.avatar.url}` : null
+    user.avatarUrl ?? null
   );
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -358,7 +290,8 @@ function DeleteConfirmationModal({
 export default function ProfilePage() {
   const router = useRouter();
   const [active, setActive] = useState<"quests" | "activity">("quests");
-  const [user, setUser] = useState<any>(null);
+  const [user, setUser] = useState<ProfileUser | null>(null);
+  const userRef = useRef<ProfileUser | null>(null);
 
   // Cards & Pagination
   const [cards, setCards] = useState<Card[]>([]);
@@ -391,8 +324,6 @@ export default function ProfilePage() {
   // Feedback state
   const [isFeedbackOpen, setIsFeedbackOpen] = useState(false);
 
-  const api = "";
-
   const handleLogout = useCallback(() => {
     try {
       localStorage.removeItem("jwt");
@@ -401,6 +332,8 @@ export default function ProfilePage() {
     }
 
     window.dispatchEvent(new Event("questly-auth-change"));
+    userRef.current = null;
+    setUser(null);
     router.push("/");
   }, [router]);
 
@@ -439,10 +372,13 @@ export default function ProfilePage() {
       return;
     }
 
-    const jwt = localStorage.getItem("jwt");
+    if (typeof cardForPost.id !== "number") {
+      setPostError("Не удалось определить карточку. Попробуйте выбрать её снова.");
+      return;
+    }
 
+    const jwt = localStorage.getItem("jwt");
     if (!jwt) {
-      setPostError("Сессия истекла. Войдите снова.");
       router.push("/login");
       return;
     }
@@ -458,26 +394,29 @@ export default function ProfilePage() {
           Authorization: `Bearer ${jwt}`,
         },
         body: JSON.stringify({
-          data: {
-            title: trimmedTitle,
-            content: trimmedContent,
-            cardId: cardForPost.id,
-            is_public: postIsPublic,
-          },
+          cardId: cardForPost.id,
+          title: trimmedTitle,
+          content: trimmedContent,
+          is_public: postIsPublic,
         }),
       });
 
       const payload = await res.json();
 
-      if (!res.ok) {
-        const errorMessage = payload?.error?.message ?? "Не удалось сохранить пост.";
-        throw new Error(errorMessage);
+      if (res.status === 401) {
+        router.push("/login");
+        return;
       }
 
-      // Force reload to ensure IDs are consistent
-      window.location.reload();
+      if (!res.ok) {
+        throw new Error(payload?.error?.message || "Не удалось опубликовать историю.");
+      }
+
+      closePostComposer();
+      await Promise.all([fetchCards(cardsPage), fetchPosts()]);
     } catch (error: any) {
-      setPostError(error?.message ?? "Не удалось сохранить пост.");
+      console.error("Failed to publish post:", error);
+      setPostError(error?.message ?? "Не удалось опубликовать историю.");
     } finally {
       setIsSubmittingPost(false);
     }
@@ -502,176 +441,232 @@ export default function ProfilePage() {
     }
 
     setIsDeletingPost(true);
-
     try {
       const res = await fetch(`/api/posts/${postToDelete}`, {
         method: "DELETE",
-        headers: {
-          Authorization: `Bearer ${jwt}`,
-        },
+        headers: { Authorization: `Bearer ${jwt}` },
       });
 
-      if (!res.ok) {
-        throw new Error("Не удалось удалить пост");
+      if (res.status === 401) {
+        router.push("/login");
+        return;
       }
 
-      setPosts((prev) => prev.filter((p) => String(p.id) !== String(postToDelete)));
-      setCards((prev) => prev.map(card => String(card.postId) === String(postToDelete) ? { ...card, postId: null } : card));
+      const payload = res.ok ? null : await res.json();
 
+      if (!res.ok) {
+        throw new Error(payload?.error?.message || "Не удалось удалить пост.");
+      }
+
+      setPosts((prev) => prev.filter((post) => String(post.id) !== String(postToDelete)));
+      await fetchCards(cardsPage);
       setPostToDelete(null);
-    } catch (error) {
-      console.error("Failed to delete post", error);
-      alert("Не удалось удалить пост. Попробуйте позже.");
+    } catch (error: any) {
+      console.error("Failed to delete post:", error);
+      setPostsError(error?.message ?? "Не удалось удалить пост.");
     } finally {
       setIsDeletingPost(false);
     }
   };
 
   const handleUpdateProfile = async ({ username, avatarFile }: { username: string; avatarFile: File | null }) => {
-    const jwt = localStorage.getItem("jwt");
-    if (!jwt || !user) return;
+    if (!user) return;
 
     setIsUpdatingProfile(true);
 
     try {
-      let avatarId = user.avatar?.id;
+      let avatarUrl = user.avatarUrl ?? null;
 
-      // 1. Upload avatar if changed
       if (avatarFile) {
-        const formData = new FormData();
-        formData.append("files", avatarFile);
-
-        const uploadRes = await fetch("/api/upload", {
-          method: "POST",
-          headers: {
-            Authorization: `Bearer ${jwt}`,
-          },
-          body: formData,
+        avatarUrl = await new Promise<string>((resolve, reject) => {
+          const reader = new FileReader();
+          reader.onload = () => resolve(typeof reader.result === "string" ? reader.result : "");
+          reader.onerror = reject;
+          reader.readAsDataURL(avatarFile);
         });
-
-        if (!uploadRes.ok) throw new Error("Failed to upload avatar");
-
-        const uploadData = await uploadRes.json();
-        if (uploadData && uploadData[0]) {
-          avatarId = uploadData[0].id;
-        }
       }
 
-      // 2. Update user
-      const updateRes = await fetch(`/api/users/${user.id}`, {
-        method: "PUT",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${jwt}`,
-        },
-        body: JSON.stringify({
-          username,
-          avatar: avatarId,
-        }),
-      });
+      const updatedUser: ProfileUser = {
+        ...user,
+        username: username.trim() || user.username,
+        avatarUrl: avatarUrl || null,
+      };
 
-      if (!updateRes.ok) throw new Error("Failed to update profile");
-
-      const updatedUser = await updateRes.json();
       setUser(updatedUser);
-      setIsEditingProfile(false);
-
-      // Update local storage if needed
+      userRef.current = updatedUser;
       localStorage.setItem("user", JSON.stringify(updatedUser));
-
+      setIsEditingProfile(false);
     } catch (error) {
       console.error("Profile update failed", error);
-      alert("Не удалось обновить профиль. Попробуйте снова.");
     } finally {
       setIsUpdatingProfile(false);
     }
   };
 
-  const fetchCards = useCallback(async (userId: number, page: number) => {
+  const fetchCards = useCallback(async (page: number) => {
     const jwt = localStorage.getItem("jwt");
-    if (!jwt) return;
+    if (!jwt) {
+      router.push("/login");
+      return;
+    }
 
     setIsCardsLoading(true);
     setCardsError(null);
+    setCardsPage(page);
 
     try {
       const params = new URLSearchParams();
-      params.append("populate", "categories");
-      params.append("pagination[page]", String(page));
-      params.append("pagination[pageSize]", String(cardsPageSize));
-      params.append("sort", "createdAt:desc");
+      params.append("page", String(page));
+      params.append("pageSize", String(cardsPageSize));
 
       const res = await fetch(`/api/cards/mine?${params.toString()}`, {
         headers: { Authorization: `Bearer ${jwt}` },
       });
 
+      const payload = await res.json();
+
+      if (res.status === 401) {
+        router.push("/login");
+        return;
+      }
+
       if (!res.ok) {
-        const errorText = await res.text();
-        console.error("Fetch cards failed:", res.status, errorText);
-        throw new Error(`Failed to fetch cards: ${res.status} ${errorText}`);
+        throw new Error(payload?.error?.message || "Не удалось загрузить карточки.");
       }
 
-      const data = await res.json();
-      const rawCards = data.data || [];
-      const meta = data.meta?.pagination;
-
-      if (meta) {
-        setCardsTotal(meta.total);
-      }
-
+      const rawCards = Array.isArray(payload?.data) ? payload.data : [];
       const normalizedCards: Card[] = rawCards.map((entry: any) => {
-        const card = entry.attributes || entry;
-        const categoriesList = readCategoryEntries(card.categories);
-
-        const categoryTitles = categoriesList
+        const categoriesList = Array.isArray(entry?.categories) ? entry.categories : [];
+        const normalizedCategories = categoriesList
           .map((item: any) => {
-            const attr = item?.attributes ?? item ?? {};
-            const rawValue = attr.title ?? attr.name ?? attr.slug ?? null;
-            if (typeof rawValue !== "string" || rawValue.trim().length === 0) return null;
-            const label = getCategoryLabel(rawValue);
-            return label || rawValue;
+            const slug = typeof item?.slug === "string" ? item.slug : null;
+            const name = typeof item?.name === "string" ? item.name : null;
+            const value = slug || name || "";
+            const label = getCategoryLabel(value);
+            return label || name || slug || "";
           })
-          .filter((v: any): v is string => typeof v === "string" && v.length > 0);
+          .filter((value: unknown): value is string => typeof value === "string" && value.length > 0);
 
-        const difficultyValue = typeof card?.difficulty === "string" ? card.difficulty : "medium";
-        const normalizedDifficulty: Card["difficulty"] =
-          ["easy", "medium", "hard"].includes(difficultyValue)
-            ? (difficultyValue as Card["difficulty"])
-            : "medium";
+        const primaryCategory = getCategoryLabelOrFallback(
+          (categoriesList[0]?.slug ?? categoriesList[0]?.name) ?? null,
+          "Личное приключение",
+        );
+
+        const difficultyValue = typeof entry?.difficulty === "string" ? entry.difficulty : "medium";
+        const difficulty: Card["difficulty"] =
+          ["easy", "medium", "hard"].includes(difficultyValue) ? (difficultyValue as Card["difficulty"]) : "medium";
 
         return {
-          id: entry.id,
-          quest_text: card.quest_text || "Без описания",
-          difficulty: normalizedDifficulty,
-          symbol_seed: card.symbol_seed || String(entry.id),
-          primaryCategory: categoryTitles[0] ?? getCategoryLabelOrFallback(undefined, "Личное приключение"),
-          categories: categoryTitles,
-          postId: card.post?.id ?? null,
+          id: entry?.id ?? `card-${Math.random().toString(36).slice(2, 8)}`,
+          quest_text: typeof entry?.quest_text === "string" ? entry.quest_text : "Приключение",
+          difficulty,
+          symbol_seed: typeof entry?.symbol_seed === "string" ? entry.symbol_seed : String(entry?.id ?? Date.now()),
+          primaryCategory,
+          categories: normalizedCategories,
+          postId: entry?.postId ?? null,
         };
       });
 
-      const uniqueCardsMap = new Map();
-      normalizedCards.forEach((card) => {
-        const key = card.symbol_seed;
-        if (!uniqueCardsMap.has(key)) {
-          uniqueCardsMap.set(key, card);
-        } else {
-          const existing = uniqueCardsMap.get(key);
-          if (!existing.postId && card.postId) {
-            uniqueCardsMap.set(key, card);
-          }
-        }
-      });
-      const uniqueCards = Array.from(uniqueCardsMap.values());
+      setCards(normalizedCards);
 
-      setCards(uniqueCards);
-    } catch (err) {
-      console.error(err);
-      setCardsError("Не удалось загрузить квесты.");
+      const pagination = payload?.meta?.pagination;
+      if (pagination) {
+        setCardsPage(pagination.page ?? page);
+        setCardsTotal(pagination.total ?? normalizedCards.length);
+      } else {
+        setCardsTotal(normalizedCards.length);
+      }
+    } catch (error: any) {
+      console.error("Failed to fetch cards:", error);
+      setCardsError(error?.message ?? "Не удалось загрузить карточки.");
     } finally {
       setIsCardsLoading(false);
     }
-  }, [api, cardsPageSize]);
+  }, [cardsPageSize, router]);
+
+  const fetchPosts = useCallback(async (profile?: ProfileUser) => {
+    const jwt = localStorage.getItem("jwt");
+    if (!jwt) {
+      router.push("/login");
+      return;
+    }
+
+    try {
+      const res = await fetch("/api/posts?scope=mine", {
+        headers: { Authorization: `Bearer ${jwt}` },
+      });
+
+      const payload = await res.json();
+
+      if (res.status === 401) {
+        router.push("/login");
+        return;
+      }
+
+      if (!res.ok) {
+        throw new Error(payload?.error?.message || "Не удалось загрузить активность.");
+      }
+
+      const rawPosts = Array.isArray(payload?.data) ? payload.data : [];
+      const currentUser = profile ?? userRef.current;
+
+      const normalizedPosts: FeedPost[] = rawPosts.map((entry: any) => {
+        const cardData = entry?.card ?? {};
+        const categoriesList = Array.isArray(cardData?.categories) ? cardData.categories : [];
+        const categorySlugs = categoriesList
+          .map((item: any) => {
+            const slug = typeof item?.slug === "string" ? item.slug : null;
+            const name = typeof item?.name === "string" ? item.name : null;
+            return slug || name || null;
+          })
+          .filter((value: unknown): value is string => typeof value === "string" && value.length > 0);
+
+        const primaryCategory = getCategoryLabelOrFallback(categorySlugs[0] ?? null, "Личное приключение");
+
+        const difficultyValue = typeof cardData?.difficulty === "string" ? cardData.difficulty : "medium";
+        const difficulty: FeedPost["card"]["difficulty"] =
+          ["easy", "medium", "hard"].includes(difficultyValue)
+            ? (difficultyValue as FeedPost["card"]["difficulty"])
+            : "medium";
+
+        const createdAtValue =
+          typeof entry?.createdAt === "string"
+            ? entry.createdAt
+            : entry?.createdAt && typeof entry.createdAt === "number"
+              ? new Date(entry.createdAt).toISOString()
+              : null;
+
+        return {
+          id: entry?.id ?? `post-${Math.random().toString(36).slice(2, 8)}`,
+          title: typeof entry?.title === "string" && entry.title.trim().length > 0 ? entry.title : "Без названия",
+          content: typeof entry?.content === "string" ? entry.content : "",
+          createdAt: createdAtValue,
+          author: {
+            username: entry?.author?.username ?? currentUser?.username ?? "Я",
+            avatarUrl: entry?.author?.avatarUrl ?? currentUser?.avatarUrl ?? null,
+          },
+          card: {
+            quest: typeof cardData?.quest_text === "string" ? cardData.quest_text : (cardData?.questText ?? "Приключение"),
+            categoryLabel: primaryCategory,
+            categorySlugs: categorySlugs.length > 0 ? categorySlugs : [primaryCategory],
+            difficulty,
+            symbolSeed:
+              typeof cardData?.symbol_seed === "string"
+                ? cardData.symbol_seed
+                : cardData?.symbolSeed ?? String(cardData?.id ?? entry?.id ?? ""),
+          },
+          votes: 0,
+          userVote: null,
+        };
+      });
+
+      setPosts(normalizedPosts);
+      setPostsError(null);
+    } catch (error: any) {
+      console.error("Failed to fetch posts:", error);
+      setPostsError(error?.message ?? "Не удалось загрузить активность.");
+    }
+  }, [router]);
 
   // Initial load
   useEffect(() => {
@@ -696,32 +691,11 @@ export default function ProfilePage() {
 
         const profileData = await meRes.json();
         setUser(profileData);
+        userRef.current = profileData;
+        localStorage.setItem("user", JSON.stringify(profileData));
 
-        // Fetch initial cards
-        await fetchCards(profileData.id, 1);
-
-        // Fetch posts
-        const postParams = new URLSearchParams();
-        postParams.append("filters[author][id][$eq]", String(profileData.id));
-        postParams.append("sort", "createdAt:desc");
-        postParams.append("populate[attached_card][populate]", "categories");
-
-        const postsRes = await fetch(`/api/posts?${postParams.toString()}`, {
-          headers: { Authorization: `Bearer ${jwt}` },
-        });
-
-        if (postsRes.ok) {
-          const postsData = await postsRes.json();
-          const normalizedPosts = (Array.isArray(postsData?.data) ? postsData.data : []).map((entry: any) =>
-            normalizePostEntry(entry),
-          );
-
-          const uniquePosts = normalizedPosts.filter((post: FeedPost, index: number, self: FeedPost[]) =>
-            index === self.findIndex((p) => p.id === post.id)
-          );
-
-          setPosts(uniquePosts);
-        }
+        await fetchCards(1);
+        await fetchPosts(profileData);
       } catch (err) {
         console.error(err);
         setCardsError("Не удалось загрузить профиль.");
@@ -731,13 +705,13 @@ export default function ProfilePage() {
     };
 
     init();
-  }, [router, api, fetchCards]);
+  }, [router, fetchCards, fetchPosts]);
 
   // Handle page change
   const handlePageChange = (newPage: number) => {
     if (newPage < 1 || !user) return;
     setCardsPage(newPage);
-    fetchCards(user.id, newPage);
+    fetchCards(newPage);
     // Scroll to top of list
     window.scrollTo({ top: 0, behavior: "smooth" });
   };
@@ -783,13 +757,15 @@ export default function ProfilePage() {
         <header className="rounded-2xl border-2 border-[#d2a06f] bg-[#fff9eb] shadow-[0_4px_0_#c99063,0_6px_8px_rgba(0,0,0,0.15)] p-6 md:p-8 mb-4">
           <div className="flex flex-col gap-6 md:flex-row md:items-center md:justify-between">
             <div className="flex flex-col md:flex-row items-center gap-5 md:gap-6 text-center md:text-left">
-              <div className="w-24 h-24 md:w-32 md:h-32 rounded-full bg-[#f2e3bf] border-2 border-[#d2a06f] overflow-hidden shrink-0">
-                {user.avatar?.url && (
+              <div className="w-24 h-24 md:w-32 md:h-32 rounded-full bg-[#f2e3bf] border-2 border-[#d2a06f] overflow-hidden shrink-0 flex items-center justify-center text-3xl font-bold text-[#d26d75]">
+                {user.avatarUrl ? (
                   <img
-                    src={`${api}${user.avatar.url}`}
+                    src={user.avatarUrl}
                     alt="avatar"
                     className="w-full h-full object-cover"
                   />
+                ) : (
+                  (user.username?.slice(0, 1) || "?").toUpperCase()
                 )}
               </div>
               <div className="flex-1 min-w-0">
@@ -991,7 +967,6 @@ export default function ProfilePage() {
         isEditingProfile && user && (
           <ProfileEditModal
             user={user}
-            apiBase={api}
             isSubmitting={isUpdatingProfile}
             onClose={() => setIsEditingProfile(false)}
             onSubmit={handleUpdateProfile}

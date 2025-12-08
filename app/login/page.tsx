@@ -45,7 +45,7 @@ export default function LoginPage() {
     setMessage(null);
 
     try {
-      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL || "http://localhost:1337"}/api/auth/local`, {
+      const res = await fetch("/api/auth/local", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
