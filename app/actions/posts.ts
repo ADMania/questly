@@ -1,11 +1,12 @@
 'use server';
 
-import { db } from '@/lib/db';
-import { posts, users, cards, votes } from '@/db/schema';
-import { desc, eq, inArray, sql } from 'drizzle-orm';
-import { revalidatePath } from 'next/cache';
-import { FeedPost } from '@/components/feed/PostCard';
-import { getCategoryLabel } from '@/lib/categories';
+import type { AdminPost } from "@/app/admin/posts/post-table";
+import { FeedPost } from "@/components/feed/PostCard";
+import { cards, posts, users, votes } from "@/db/schema";
+import { getCategoryLabel } from "@/lib/categories";
+import { db } from "@/lib/db";
+import { desc, eq, inArray, sql } from "drizzle-orm";
+import { revalidatePath } from "next/cache";
 
 export async function getFeedPosts(): Promise<FeedPost[]> {
     try {
@@ -74,7 +75,7 @@ export async function getFeedPosts(): Promise<FeedPost[]> {
     }
 }
 
-export async function getAdminPosts() {
+export async function getAdminPosts(): Promise<AdminPost[]> {
     try {
         const allPosts = await db.select({
             id: posts.id,
@@ -100,9 +101,15 @@ export async function getAdminPosts() {
             .orderBy(desc(posts.id));
 
         return allPosts.map((post) => ({
-            ...post,
+            id: Number(post.id),
+            title: post.title ?? "",
+            content: post.content ?? "",
             isPublic: Boolean(post.isPublic),
-        }));
+            authorId: Number(post.authorId),
+            cardId: post.cardId ?? null,
+            author: post.author ?? null,
+            attachedCard: post.attachedCard ?? null,
+        })) as AdminPost[];
     } catch (e) {
         console.error("Failed to get admin posts", e);
         return [];

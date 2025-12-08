@@ -119,9 +119,9 @@ const pgCards = pgTable(
     difficulty: text("difficulty").notNull().default("medium"),
     symbolSeed: text("symbol_seed"),
     category: text("category"),
-    ownerId: integer("owner_id")
-      .references(() => pgUsers.id, { onDelete: "set null" })
-      .default(null),
+    ownerId: integer("owner_id").references(() => pgUsers.id, {
+      onDelete: "set null",
+    }),
   },
   (table) => ({
     slugUnique: uniqueIndex("cards_slug_unique").on(table.slug),

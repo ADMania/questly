@@ -402,12 +402,14 @@ export default function PostCard({ post, onDelete, readOnly = false }: PostCardP
 
                                             <p className="text-[#5e4632] text-sm leading-relaxed pl-2">{comment.content}</p>
                                             <div className="mt-2 text-[10px] uppercase tracking-wider font-bold text-[#d2a06f] text-right">
-                                                {new Date(comment.createdAt).toLocaleDateString("ru-RU", {
-                                                    day: "numeric",
-                                                    month: "long",
-                                                    hour: "2-digit",
-                                                    minute: "2-digit"
-                                                })}
+                                                {comment.createdAt
+                                                    ? new Date(comment.createdAt).toLocaleDateString("ru-RU", {
+                                                        day: "numeric",
+                                                        month: "long",
+                                                        hour: "2-digit",
+                                                        minute: "2-digit",
+                                                    })
+                                                    : ""}
                                             </div>
                                         </div>
                                     ))

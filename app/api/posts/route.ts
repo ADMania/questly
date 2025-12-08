@@ -124,7 +124,7 @@ export async function GET(request: Request) {
       filters.push(eq(posts.isPublic, true));
     }
 
-    let query = db
+    const baseQuery = db
       .select({
         post: {
           id: posts.id,
@@ -150,13 +150,14 @@ export async function GET(request: Request) {
       .leftJoin(cards, eq(posts.attachedCardId, cards.id))
       .leftJoin(users, eq(posts.authorId, users.id));
 
-    if (filters.length === 1) {
-      query = query.where(filters[0]);
-    } else if (filters.length > 1) {
-      query = query.where(and(...filters));
-    }
+    const queryWithFilters =
+      filters.length === 0
+        ? baseQuery
+        : filters.length === 1
+          ? baseQuery.where(filters[0])
+          : baseQuery.where(and(...filters));
 
-    const rows = await query.orderBy(desc(posts.createdAt));
+    const rows = await queryWithFilters.orderBy(desc(posts.createdAt));
 
     const postIds = rows
       .map((row) => row.post.id)

@@ -31,6 +31,7 @@ export async function GET(request: Request) {
         questText: cards.questText,
         difficulty: cards.difficulty,
         symbolSeed: cards.symbolSeed,
+        category: cards.category,
       })
       .from(cards)
       .where(eq(cards.ownerId, user.id))

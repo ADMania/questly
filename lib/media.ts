@@ -1,4 +1,5 @@
 import { promises as fs } from "node:fs";
+import type { Dirent } from "node:fs";
 import path from "node:path";
 
 export type MediaFile = {
@@ -15,7 +16,7 @@ export async function listMediaFiles(): Promise<MediaFile[]> {
   const entries: MediaFile[] = [];
 
   async function walk(dir: string, relativeBase = "") {
-    let dirEntries: fs.Dirent[];
+    let dirEntries: Dirent[];
     try {
       dirEntries = await fs.readdir(dir, { withFileTypes: true });
     } catch (error) {

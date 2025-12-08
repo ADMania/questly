@@ -6,15 +6,15 @@ import { updatePost } from "@/app/actions/posts";
 
 type Option = { id: number; label: string };
 
-type AdminPost = {
+export type AdminPost = {
   id: number;
   title: string;
   content: string;
   isPublic: boolean;
-  authorId: number | null;
+  authorId: number;
   cardId: number | null;
-  author?: { username?: string };
-  attachedCard?: { slug?: string };
+  author: { id: number; username: string; avatarUrl: string | null };
+  attachedCard: { id: number | null; slug: string | null; questText: string | null } | null;
 };
 
 export default function PostTable({
@@ -62,7 +62,7 @@ function PostRow({ post, authors, cards }: { post: AdminPost; authors: Option[];
   const [form, setForm] = useState({
     title: post.title,
     content: post.content,
-    authorId: post.authorId ? String(post.authorId) : "",
+    authorId: String(post.authorId),
     cardId: post.cardId ? String(post.cardId) : "",
     isPublic: post.isPublic,
   });
