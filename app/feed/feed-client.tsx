@@ -1,8 +1,9 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import BackgroundGrid from "@/components/BackgroundGrid";
 import PostCard, { FeedPost } from "@/components/feed/PostCard";
+import { normalizeFeedPost } from "./normalize";
 
 const filters = [
     { key: "all", label: "Все" },
@@ -15,7 +16,48 @@ const filters = [
 
 export default function FeedClient({ initialPosts }: { initialPosts: FeedPost[] }) {
     const [active, setActive] = useState<string>("all");
-    const posts = initialPosts;
+    const [posts, setPosts] = useState<FeedPost[]>(initialPosts);
+
+    useEffect(() => {
+        let isMounted = true;
+
+        const hydrateFeed = async () => {
+            try {
+                const jwt = typeof window !== "undefined" ? localStorage.getItem("jwt") : null;
+                const headers: Record<string, string> = {};
+                if (jwt) {
+                    headers.Authorization = `Bearer ${jwt}`;
+                }
+
+                const response = await fetch("/api/posts", {
+                    headers,
+                    cache: "no-store",
+                });
+
+                if (!response.ok) {
+                    return;
+                }
+
+                const payload = await response.json();
+                if (!Array.isArray(payload?.data)) {
+                    return;
+                }
+
+                const normalized = payload.data.map((entry: any) => normalizeFeedPost(entry));
+                if (isMounted) {
+                    setPosts(normalized);
+                }
+            } catch (error) {
+                console.error("Failed to hydrate feed:", error);
+            }
+        };
+
+        hydrateFeed();
+
+        return () => {
+            isMounted = false;
+        };
+    }, []);
 
     const visiblePosts = useMemo(() => {
         if (active === "all") return posts;

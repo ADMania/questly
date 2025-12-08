@@ -1,30 +1,19 @@
 'use server';
 
 import { db } from '@/lib/db';
-import { cards, cardsToCategories, categories } from '@/db/schema';
+import { cards } from '@/db/schema';
 import { eq, desc } from 'drizzle-orm';
 import { revalidatePath } from 'next/cache';
+import { getCategoryLabel } from '@/lib/categories';
 
 export async function getCards() {
     try {
         const allCards = await db.select().from(cards).orderBy(desc(cards.id));
-
-        // Fetch categories for each card
-        // This is N+1 but efficient enough for admin panel with small data
-        const cardsWithCategories = await Promise.all(allCards.map(async (card) => {
-            const cardCategories = await db.select({
-                id: categories.id,
-                name: categories.name,
-                slug: categories.slug
-            })
-                .from(cardsToCategories)
-                .innerJoin(categories, eq(cardsToCategories.categoryId, categories.id))
-                .where(eq(cardsToCategories.cardId, card.id));
-
-            return { ...card, categories: cardCategories };
+        return allCards.map((card) => ({
+            ...card,
+            categorySlug: card.category ?? null,
+            categoryLabel: getCategoryLabel(card.category),
         }));
-
-        return cardsWithCategories;
     } catch (error) {
         console.error('Failed to fetch cards:', error);
         return [];
@@ -36,8 +25,7 @@ export async function createCard(formData: FormData) {
     const slug = formData.get('slug') as string;
     const difficulty = formData.get('difficulty') as string;
     const symbolSeed = formData.get('symbolSeed') as string;
-
-    const categoryIds = formData.getAll('categories').map(id => parseInt(id as string));
+    const category = (formData.get('category') as string)?.trim().toLowerCase() || null;
 
     if (!questText || !slug) {
         return { error: 'Quest Text and Slug are required' };
@@ -49,18 +37,10 @@ export async function createCard(formData: FormData) {
             slug,
             difficulty: difficulty || 'medium',
             symbolSeed: symbolSeed || null,
+            category,
         }).returning({ insertedId: cards.id });
 
         const newCardId = result[0].insertedId;
-
-        if (categoryIds.length > 0) {
-            await db.insert(cardsToCategories).values(
-                categoryIds.map(catId => ({
-                    cardId: newCardId,
-                    categoryId: catId
-                }))
-            );
-        }
 
         revalidatePath('/admin/cards');
         return { success: true };
@@ -72,8 +52,6 @@ export async function createCard(formData: FormData) {
 
 export async function deleteCard(id: number) {
     try {
-        // Delete relations first
-        await db.delete(cardsToCategories).where(eq(cardsToCategories.cardId, id));
         await db.delete(cards).where(eq(cards.id, id));
 
         revalidatePath('/admin/cards');

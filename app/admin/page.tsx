@@ -1,23 +1,23 @@
 import { db } from '@/lib/db';
-import { users, posts, cards, categories } from '@/db/schema';
+import { users, posts, cards, questTemplates } from '@/db/schema';
 import { sql } from 'drizzle-orm';
 
 async function getCounts() {
     try {
-        const [usersCount, postsCount, cardsCount, categoriesCount] = await Promise.all([
+        const [usersCount, postsCount, cardsCount, templatesCount] = await Promise.all([
             db.select({ count: sql<number>`count(*)` }).from(users),
             db.select({ count: sql<number>`count(*)` }).from(posts),
             db.select({ count: sql<number>`count(*)` }).from(cards),
-            db.select({ count: sql<number>`count(*)` }).from(categories),
+            db.select({ count: sql<number>`count(*)` }).from(questTemplates),
         ]);
         return {
             users: usersCount[0].count,
             posts: postsCount[0].count,
             cards: cardsCount[0].count,
-            categories: categoriesCount[0].count
+            templates: templatesCount[0].count
         };
     } catch (e) {
-        return { users: 0, posts: 0, cards: 0, categories: 0 };
+        return { users: 0, posts: 0, cards: 0, templates: 0 };
     }
 }
 
@@ -37,7 +37,7 @@ export default async function AdminDashboard() {
                 <DashboardCard title="Пользователи" count={counts.users} icon="👤" color="bg-blue-100 text-blue-800" />
                 <DashboardCard title="Квесты (Cards)" count={counts.cards} icon="🃏" color="bg-orange-100 text-orange-800" />
                 <DashboardCard title="Посты" count={counts.posts} icon="📝" color="bg-green-100 text-green-800" />
-                <DashboardCard title="Категории" count={counts.categories} icon="🏷️" color="bg-purple-100 text-purple-800" />
+                <DashboardCard title="Шаблоны квестов" count={counts.templates} icon="📚" color="bg-purple-100 text-purple-800" />
             </div>
 
             <div className="mt-12 rounded-3xl border-2 border-[#d2a06f] bg-[#fff9eb] p-8 shadow-[0_8px_0_#c99063,0_18px_30px_rgba(0,0,0,0.1)] text-center">
@@ -47,7 +47,7 @@ export default async function AdminDashboard() {
                         + Создать квест
                     </a>
                     <a href="/admin/fragments" className="px-6 py-3 rounded-xl border-2 border-[#d2a06f] bg-white text-[#5e4632] font-semibold hover:bg-[#f2e3bf] transition shadow-sm">
-                        + Добавить фрагмент
+                        + Добавить шаблон
                     </a>
                 </div>
             </div>

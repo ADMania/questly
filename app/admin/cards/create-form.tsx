@@ -2,21 +2,18 @@
 
 import { createCard } from '@/app/actions/cards';
 import { generateQuestAction } from '@/app/actions/quest-generation';
+import { CATEGORY_LABELS } from '@/lib/categories';
 import { useRef, useState, useEffect } from 'react';
 
-type CategoryOption = {
-    id: number;
-    name: string;
-    slug: string;
-};
+const categoryOptions = Object.entries(CATEGORY_LABELS);
 
-export default function CardCreateForm({ categories }: { categories: CategoryOption[] }) {
+export default function CardCreateForm() {
     const formRef = useRef<HTMLFormElement>(null);
     const [difficulty, setDifficulty] = useState('medium');
     const [questText, setQuestText] = useState('');
     const [slug, setSlug] = useState('');
     const [symbolSeed, setSymbolSeed] = useState('');
-    const [selectedCats, setSelectedCats] = useState<number[]>([]);
+    const [category, setCategory] = useState('');
 
     // Auto-slug
     useEffect(() => {
@@ -41,19 +38,16 @@ export default function CardCreateForm({ categories }: { categories: CategoryOpt
             setQuestText('');
             setSlug('');
             setSymbolSeed('');
-            setSelectedCats([]);
+            setCategory('');
         } else if (result?.error) {
             alert(result.error);
         }
     }
 
     async function handleGenerate() {
-        const primaryCatId = selectedCats[0];
-        const cat = categories.find(c => c.id === primaryCatId);
-
         const result = await generateQuestAction({
             difficulty: difficulty as any,
-            categorySlug: cat?.slug
+            categorySlug: category || undefined
         });
 
         if (result) {
@@ -129,32 +123,19 @@ export default function CardCreateForm({ categories }: { categories: CategoryOpt
                     <p className="text-xs text-[#8c6b54] mt-2">Используется для генерации уникальной пиктограммы.</p>
                 </div>
 
-                <div className="md:col-span-2 border-t border-[#eaddcf] pt-6 mt-2">
-                    <label className="block text-sm font-bold text-[#5e4632] mb-3">Категории</label>
-                    <div className="flex flex-wrap gap-3">
-                        {categories.map((cat) => (
-                            <label key={cat.id} className={`
-                                cursor-pointer px-3 py-2 rounded-lg border-2 transition select-none flex items-center gap-2
-                                ${selectedCats.includes(cat.id)
-                                    ? 'bg-[#d26d75] border-[#d26d75] text-white shadow-[0_2px_0_#a9565d] translate-y-[1px]'
-                                    : 'bg-white border-[#d2a06f] text-[#5e4632] hover:bg-[#fff9eb]'}
-                            `}>
-                                <input
-                                    type="checkbox"
-                                    name="categories"
-                                    value={cat.id}
-                                    checked={selectedCats.includes(cat.id)}
-                                    onChange={e => {
-                                        const id = parseInt(e.target.value);
-                                        if (e.target.checked) setSelectedCats([...selectedCats, id]);
-                                        else setSelectedCats(selectedCats.filter(c => c !== id));
-                                    }}
-                                    className="hidden"
-                                />
-                                <span className="text-sm font-bold">{cat.name}</span>
-                            </label>
+                <div>
+                    <label className="block text-sm font-bold text-[#5e4632] mb-2">Категория</label>
+                    <select
+                        name="category"
+                        value={category}
+                        onChange={(event) => setCategory(event.target.value)}
+                        className="w-full px-4 py-3 rounded-xl border-2 border-[#d2a06f] bg-white focus:bg-[#fffcf5] outline-none transition text-[#3c2415]"
+                    >
+                        <option value="">Без категории</option>
+                        {categoryOptions.map(([slug, label]) => (
+                            <option key={slug} value={slug}>{label}</option>
                         ))}
-                    </div>
+                    </select>
                 </div>
 
                 <div className="md:col-span-2 mt-4">

@@ -1,8 +1,9 @@
 import { NextResponse } from "next/server";
 import { desc, eq, inArray, sql } from "drizzle-orm";
 import { db } from "@/lib/db";
-import { cards, cardsToCategories, categories, posts } from "@/db/schema";
+import { cards, posts } from "@/db/schema";
 import { getUserFromRequest, unauthorized } from "@/lib/auth-guard";
+import { getCategoryLabel } from "@/lib/categories";
 
 const MAX_PAGE_SIZE = 24;
 
@@ -39,27 +40,9 @@ export async function GET(request: Request) {
 
     const cardIds = userCards.map((card) => card.id).filter((id): id is number => typeof id === "number");
 
-    let categoriesMap = new Map<number, { slug: string | null; name: string | null }[]>();
     let postMap = new Map<number, number>();
 
     if (cardIds.length > 0) {
-      const categoryRows = await db
-        .select({
-          cardId: cardsToCategories.cardId,
-          slug: categories.slug,
-          name: categories.name,
-        })
-        .from(cardsToCategories)
-        .innerJoin(categories, eq(cardsToCategories.categoryId, categories.id))
-        .where(inArray(cardsToCategories.cardId, cardIds));
-
-      categoryRows.forEach((row) => {
-        if (!row.cardId) return;
-        const list = categoriesMap.get(row.cardId) ?? [];
-        list.push({ slug: row.slug, name: row.name });
-        categoriesMap.set(row.cardId, list);
-      });
-
       const postRows = await db
         .select({
           id: posts.id,
@@ -80,7 +63,9 @@ export async function GET(request: Request) {
       quest_text: card.questText,
       difficulty: card.difficulty,
       symbol_seed: card.symbolSeed,
-      categories: categoriesMap.get(card.id ?? -1) ?? [],
+      categories: card.category
+        ? [{ slug: card.category, name: getCategoryLabel(card.category) }]
+        : [],
       postId: card.id ? postMap.get(card.id) ?? null : null,
     }));
 

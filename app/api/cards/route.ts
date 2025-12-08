@@ -1,7 +1,6 @@
 import { NextResponse } from "next/server";
-import { inArray } from "drizzle-orm";
 import { db } from "@/lib/db";
-import { cards, cardsToCategories, categories } from "@/db/schema";
+import { cards } from "@/db/schema";
 import { getCategoryLabel } from "@/lib/categories";
 import { getUserFromRequest, unauthorized } from "@/lib/auth-guard";
 
@@ -56,55 +55,7 @@ export async function POST(request: Request) {
           .filter((value): value is string => Boolean(value)),
       ),
     );
-
-    const categoryRecords = new Map<string, { id: number; name: string; slug: string }>();
-
-    if (normalizedCategories.length > 0) {
-      const existing = await db
-        .select({
-          id: categories.id,
-          slug: categories.slug,
-          name: categories.name,
-        })
-        .from(categories)
-        .where(inArray(categories.slug, normalizedCategories));
-
-      existing.forEach((item) => {
-        if (item.slug) {
-          categoryRecords.set(item.slug, {
-            id: item.id!,
-            name: item.name || getCategoryLabel(item.slug),
-            slug: item.slug,
-          });
-        }
-      });
-
-      const missingSlugs = normalizedCategories.filter(
-        (slug) => !categoryRecords.has(slug),
-      );
-
-      if (missingSlugs.length > 0) {
-        const inserted = await db
-          .insert(categories)
-          .values(
-            missingSlugs.map((slug) => ({
-              slug,
-              name: getCategoryLabel(slug) || slug,
-            })),
-          )
-          .returning({ id: categories.id, slug: categories.slug, name: categories.name });
-
-        inserted.forEach((item) => {
-          if (item.slug && item.id) {
-            categoryRecords.set(item.slug, {
-              id: item.id,
-              name: item.name || getCategoryLabel(item.slug),
-              slug: item.slug,
-            });
-          }
-        });
-      }
-    }
+    const categorySlug = normalizedCategories[0] ?? null;
 
     const inserted = await db
       .insert(cards)
@@ -113,6 +64,7 @@ export async function POST(request: Request) {
         difficulty,
         symbolSeed,
         ownerId: user.id,
+        category: categorySlug,
         slug: generateSlug(),
       })
       .returning({
@@ -127,19 +79,6 @@ export async function POST(request: Request) {
       throw new Error("Card insert failed");
     }
 
-    const categoryIds = normalizedCategories
-      .map((slug) => categoryRecords.get(slug)?.id)
-      .filter((id): id is number => typeof id === "number");
-
-    if (categoryIds.length > 0) {
-      await db.insert(cardsToCategories).values(
-        categoryIds.map((categoryId) => ({
-          cardId: newCard.id!,
-          categoryId,
-        })),
-      );
-    }
-
     return NextResponse.json(
       {
         data: {
@@ -147,10 +86,9 @@ export async function POST(request: Request) {
           quest_text: newCard.questText,
           difficulty: newCard.difficulty,
           symbol_seed: newCard.symbolSeed,
-          categories: normalizedCategories.map((slug) => ({
-            slug,
-            name: categoryRecords.get(slug)?.name || getCategoryLabel(slug),
-          })),
+          categories: categorySlug
+            ? [{ slug: categorySlug, name: getCategoryLabel(categorySlug) }]
+            : [],
         },
       },
       { status: 201 },

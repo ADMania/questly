@@ -1,10 +1,11 @@
 'use server';
 
 import { db } from '@/lib/db';
-import { posts, users, cards, cardsToCategories, categories, votes } from '@/db/schema';
+import { posts, users, cards, votes } from '@/db/schema';
 import { eq, desc } from 'drizzle-orm';
 import { revalidatePath } from 'next/cache';
 import { FeedPost } from '@/components/feed/PostCard';
+import { getCategoryLabel } from '@/lib/categories';
 
 export async function getFeedPosts(): Promise<FeedPost[]> {
     try {
@@ -19,25 +20,10 @@ export async function getFeedPosts(): Promise<FeedPost[]> {
             .where(eq(posts.isPublic, true))
             .orderBy(desc(posts.createdAt));
 
-        // For feed, we need categories and votes too. Simple N+1 for now or complex JOIN.
-        // Let's do Promsie.all for categories.
-
         const augmentedPosts = await Promise.all(allPosts.map(async (row) => {
-            let cardCategories: any[] = [];
-            if (row.card) {
-                cardCategories = await db.select({
-                    slug: categories.slug,
-                    name: categories.name
-                })
-                    .from(cardsToCategories)
-                    .innerJoin(categories, eq(cardsToCategories.categoryId, categories.id))
-                    .where(eq(cardsToCategories.cardId, row.card.id));
-            }
-
             const postVotes = await db.select().from(votes).where(eq(votes.postId, row.post.id));
             const voteSum = postVotes.reduce((acc, v) => acc + (v.value || 0), 0);
-
-            const primaryCategory = cardCategories[0]?.name || 'Личное приключение';
+            const primaryCategory = getCategoryLabel(row.card?.category) || 'Личное приключение';
 
             return {
                 id: row.post.id,
@@ -51,7 +37,7 @@ export async function getFeedPosts(): Promise<FeedPost[]> {
                 card: {
                     quest: row.card?.questText || '',
                     categoryLabel: primaryCategory,
-                    categorySlugs: cardCategories.map(c => c.slug),
+                    categorySlugs: row.card?.category ? [row.card.category] : [],
                     difficulty: (row.card?.difficulty as 'easy' | 'medium' | 'hard') || 'medium',
                     symbolSeed: row.card?.symbolSeed || undefined,
                 },

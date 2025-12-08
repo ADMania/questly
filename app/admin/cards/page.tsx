@@ -1,13 +1,9 @@
 import { getCards } from '@/app/actions/cards';
-import { getCategories } from '@/app/actions/categories';
 import CardCreateForm from './create-form';
 import DeleteCardButton from './delete-button';
 
 export default async function AdminCardsPage() {
-    const [cards, categories] = await Promise.all([
-        getCards(),
-        getCategories(),
-    ]);
+    const cards = await getCards();
 
     return (
         <div>
@@ -18,7 +14,7 @@ export default async function AdminCardsPage() {
                 <p className="text-[#5e4632]">Создавайте и редактируйте квесты для пользователей.</p>
             </header>
 
-            <CardCreateForm categories={categories} />
+            <CardCreateForm />
 
             <div className="rounded-2xl border-2 border-[#d2a06f] bg-[#fff9eb] overflow-hidden shadow-[0_4px_0_#c99063]">
                 <table className="w-full text-left border-collapse">
@@ -27,7 +23,7 @@ export default async function AdminCardsPage() {
                             <th className="p-4 font-bold uppercase text-xs tracking-wider">ID</th>
                             <th className="p-4 font-bold uppercase text-xs tracking-wider">Задание</th>
                             <th className="p-4 font-bold uppercase text-xs tracking-wider">Сложность</th>
-                            <th className="p-4 font-bold uppercase text-xs tracking-wider">Категории</th>
+                            <th className="p-4 font-bold uppercase text-xs tracking-wider">Категория</th>
                             <th className="p-4 font-bold uppercase text-xs tracking-wider">Действия</th>
                         </tr>
                     </thead>
@@ -54,7 +50,7 @@ export default async function AdminCardsPage() {
                                         </span>
                                     </td>
                                     <td className="p-4 text-sm text-[#5e4632]">
-                                        {card.categories.map(c => c.name).join(', ')}
+                                        {card.categoryLabel || 'Без категории'}
                                     </td>
                                     <td className="p-4">
                                         <DeleteCardButton id={card.id} />

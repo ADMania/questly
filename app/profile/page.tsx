@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import BackgroundGrid from "@/components/BackgroundGrid";
 import AdventureCard from "@/components/cards/AdventureCard";
 import FeedbackModal from "@/components/modals/FeedbackModal";
+import ProfileStats from "@/components/modals/ProfileStats";
 import { motion } from "framer-motion";
 import PostCard, { FeedPost } from "@/components/feed/PostCard";
 import { getCategoryLabel, getCategoryLabelOrFallback } from "@/lib/categories";
@@ -302,6 +303,7 @@ export default function ProfilePage() {
   const [isCardsLoading, setIsCardsLoading] = useState(false);
 
   const [posts, setPosts] = useState<FeedPost[]>([]);
+  const [stats, setStats] = useState({ cards: 0, posts: 0, votes: 0 });
   const [postsError, setPostsError] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
 
@@ -314,7 +316,7 @@ export default function ProfilePage() {
   const [isSubmittingPost, setIsSubmittingPost] = useState(false);
 
   // Post deletion state
-  const [postToDelete, setPostToDelete] = useState<number | string | null>(null);
+  const [postToDelete, setPostToDelete] = useState<number | null>(null);
   const [isDeletingPost, setIsDeletingPost] = useState(false);
 
   // Profile editing state
@@ -423,7 +425,22 @@ export default function ProfilePage() {
   };
 
   const initiateDeletePost = (postId: number | string) => {
-    setPostToDelete(postId);
+    const targetPost = posts.find(
+      (post) =>
+        String(post.id) === String(postId) ||
+        (post.documentId && String(post.documentId) === String(postId)),
+    );
+
+    const numericId = targetPost
+      ? Number(targetPost.documentId ?? targetPost.id)
+      : Number(postId);
+
+    if (!Number.isFinite(numericId)) {
+      setPostsError("Не удалось определить пост для удаления.");
+      return;
+    }
+
+    setPostToDelete(numericId);
   };
 
   const cancelDeletePost = () => {
@@ -432,7 +449,7 @@ export default function ProfilePage() {
   };
 
   const confirmDeletePost = async () => {
-    if (!postToDelete) return;
+    if (postToDelete === null) return;
 
     const jwt = localStorage.getItem("jwt");
     if (!jwt) {
@@ -458,7 +475,13 @@ export default function ProfilePage() {
         throw new Error(payload?.error?.message || "Не удалось удалить пост.");
       }
 
-      setPosts((prev) => prev.filter((post) => String(post.id) !== String(postToDelete)));
+      setPosts((prev) =>
+        prev.filter(
+          (post) =>
+            String(post.id) !== String(postToDelete) &&
+            String(post.documentId ?? "") !== String(postToDelete),
+        ),
+      );
       await fetchCards(cardsPage);
       setPostToDelete(null);
     } catch (error: any) {
@@ -470,15 +493,18 @@ export default function ProfilePage() {
   };
 
   const handleUpdateProfile = async ({ username, avatarFile }: { username: string; avatarFile: File | null }) => {
-    if (!user) return;
+    const jwt = localStorage.getItem("jwt");
+    if (!jwt || !user) {
+      router.push("/login");
+      return;
+    }
 
     setIsUpdatingProfile(true);
 
     try {
-      let avatarUrl = user.avatarUrl ?? null;
-
+      let avatarData: string | null = null;
       if (avatarFile) {
-        avatarUrl = await new Promise<string>((resolve, reject) => {
+        avatarData = await new Promise<string>((resolve, reject) => {
           const reader = new FileReader();
           reader.onload = () => resolve(typeof reader.result === "string" ? reader.result : "");
           reader.onerror = reject;
@@ -486,11 +512,27 @@ export default function ProfilePage() {
         });
       }
 
-      const updatedUser: ProfileUser = {
-        ...user,
-        username: username.trim() || user.username,
-        avatarUrl: avatarUrl || null,
-      };
+      const res = await fetch("/api/profile", {
+        method: "PUT",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${jwt}`,
+        },
+        body: JSON.stringify({
+          username,
+          avatarData: avatarData ?? undefined,
+        }),
+      });
+
+      if (res.status === 401) {
+        router.push("/login");
+        return;
+      }
+
+      const updatedUser = await res.json();
+      if (!res.ok) {
+        throw new Error(updatedUser?.error?.message || "Не удалось обновить профиль.");
+      }
 
       setUser(updatedUser);
       userRef.current = updatedUser;
@@ -498,6 +540,7 @@ export default function ProfilePage() {
       setIsEditingProfile(false);
     } catch (error) {
       console.error("Profile update failed", error);
+      alert(error instanceof Error ? error.message : "Не удалось обновить профиль.");
     } finally {
       setIsUpdatingProfile(false);
     }
@@ -568,6 +611,7 @@ export default function ProfilePage() {
       });
 
       setCards(normalizedCards);
+      setStats((prev) => ({ ...prev, cards: payload?.meta?.pagination?.total ?? normalizedCards.length }));
 
       const pagination = payload?.meta?.pagination;
       if (pagination) {
@@ -637,6 +681,12 @@ export default function ProfilePage() {
               : null;
 
         return {
+          documentId:
+            typeof entry?.id === "number"
+              ? String(entry.id)
+              : typeof entry?.documentId === "string"
+                ? entry.documentId
+                : undefined,
           id: entry?.id ?? `post-${Math.random().toString(36).slice(2, 8)}`,
           title: typeof entry?.title === "string" && entry.title.trim().length > 0 ? entry.title : "Без названия",
           content: typeof entry?.content === "string" ? entry.content : "",
@@ -655,12 +705,18 @@ export default function ProfilePage() {
                 ? cardData.symbol_seed
                 : cardData?.symbolSeed ?? String(cardData?.id ?? entry?.id ?? ""),
           },
-          votes: 0,
-          userVote: null,
+          votes: typeof entry?.votes === "number" ? entry.votes : 0,
+          userVote: entry?.userVote === "up" || entry?.userVote === "down" ? entry.userVote : null,
         };
       });
 
+      const totalVotes = normalizedPosts.reduce((acc, post) => acc + (post.votes || 0), 0);
       setPosts(normalizedPosts);
+      setStats((prev) => ({
+        ...prev,
+        posts: normalizedPosts.length,
+        votes: totalVotes,
+      }));
       setPostsError(null);
     } catch (error: any) {
       console.error("Failed to fetch posts:", error);
@@ -756,7 +812,7 @@ export default function ProfilePage() {
         {/* 🧠 Шапка профиля */}
         <header className="rounded-2xl border-2 border-[#d2a06f] bg-[#fff9eb] shadow-[0_4px_0_#c99063,0_6px_8px_rgba(0,0,0,0.15)] p-6 md:p-8 mb-4">
           <div className="flex flex-col gap-6 md:flex-row md:items-center md:justify-between">
-            <div className="flex flex-col md:flex-row items-center gap-5 md:gap-6 text-center md:text-left">
+              <div className="flex flex-col lg:flex-row items-center gap-5 lg:gap-8 text-center lg:text-left w-full">
               <div className="w-24 h-24 md:w-32 md:h-32 rounded-full bg-[#f2e3bf] border-2 border-[#d2a06f] overflow-hidden shrink-0 flex items-center justify-center text-3xl font-bold text-[#d26d75]">
                 {user.avatarUrl ? (
                   <img
@@ -768,16 +824,21 @@ export default function ProfilePage() {
                   (user.username?.slice(0, 1) || "?").toUpperCase()
                 )}
               </div>
-              <div className="flex-1 min-w-0">
-                <h1
-                  className="text-3xl md:text-4xl font-extrabold truncate max-w-[200px] md:max-w-md mx-auto md:mx-0"
-                  style={{ color: "#d26d75", textShadow: "0 2px 3px rgba(0,0,0,0.15)" }}
-                >
-                  {user.username}
-                </h1>
-                <p className="text-[#5e4632]/80 font-medium mt-1">
-                  Искатель приключений
-                </p>
+              <div className="flex-1 min-w-0 w-full lg:flex lg:items-center lg:justify-between gap-4">
+                <div className="space-y-1">
+                  <h1
+                    className="text-3xl md:text-4xl font-extrabold truncate max-w-full"
+                    style={{ color: "#d26d75", textShadow: "0 2px 3px rgba(0,0,0,0.15)" }}
+                  >
+                    {user.username}
+                  </h1>
+                  <p className="text-[#5e4632]/80 font-medium">
+                    Искатель приключений
+                  </p>
+                </div>
+                <div className="flex-1 flex justify-center lg:justify-center">
+                  <ProfileStats stats={stats} />
+                </div>
               </div>
             </div>
 

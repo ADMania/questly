@@ -1,15 +1,7 @@
 'use server';
 
 import { db } from '@/lib/db';
-import {
-    questActions, actionsToCategories,
-    questPlaces, placesToCategories,
-    questObjects, objectsToCategories,
-    categories
-} from '@/db/schema';
-import { eq, inArray, isNull, sql } from 'drizzle-orm';
-
-type SlotKey = "action" | "place" | "object";
+import { questTemplates } from '@/db/schema';
 
 type GenerateOptions = {
     categorySlug?: string;
@@ -30,91 +22,46 @@ function pickWeighted<T extends { weight: number | null }>(items: T[]): T {
     return weightedItems[weightedItems.length - 1];
 }
 
+const DIFFICULTY_VALUES: Array<'easy' | 'medium' | 'hard'> = ['easy', 'medium', 'hard'];
+
 export async function generateQuestAction(options: GenerateOptions) {
-    const { categorySlug, difficulty = 'medium' } = options;
+    const { categorySlug } = options;
+    const requestedDifficulty = options.difficulty ?? DIFFICULTY_VALUES[Math.floor(Math.random() * DIFFICULTY_VALUES.length)];
 
-    let activeSlots: SlotKey[] = ["action", "place", "object"];
-    if (difficulty === "easy") {
-        activeSlots = ["action"];
-    } else if (difficulty === "medium") {
-        activeSlots = Math.random() < 0.5 ? ["action", "place"] : ["action", "object"];
-    }
+    const templates = await db.select({
+        id: questTemplates.id,
+        text: questTemplates.text,
+        weight: questTemplates.weight,
+        difficulty: questTemplates.difficulty,
+        category: questTemplates.category,
+    }).from(questTemplates);
 
-    let categoryId: number | null = null;
+    const difficultyFiltered = templates.filter((template) => template.difficulty === requestedDifficulty);
+    let filtered = difficultyFiltered.length > 0 ? difficultyFiltered : templates;
+
     if (categorySlug) {
-        const cat = await db.select().from(categories).where(eq(categories.slug, categorySlug)).limit(1);
-        if (cat.length > 0) categoryId = cat[0].id;
-    }
-
-    const parts: string[] = [];
-    const fragmentIds: string[] = [];
-
-    // Helper to fetch filtered items
-    async function fetchItems(table: any, junction: any, junctionIdField: any, slot: string) {
-        // Fetch all items
-        const allItems = await db.select({
-            id: table.id,
-            text: table.text,
-            weight: table.weight
-        }).from(table);
-
-        if (!categoryId) return allItems;
-
-        // If category selected, filter:
-        // Include if (in category) OR (not in any category aka universal)
-
-        // Items in this category
-        const inCat = await db.select({ id: junctionIdField })
-            .from(junction)
-            .where(eq(junction.categoryId, categoryId));
-        const inCatIds = new Set(inCat.map(x => x.id));
-
-        // Items in ANY category
-        const inAny = await db.select({ id: junctionIdField }).from(junction);
-        const inAnyIds = new Set(inAny.map(x => x.id));
-
-        return allItems.filter(item => inCatIds.has(item.id) || !inAnyIds.has(item.id));
-    }
-
-    for (const slot of activeSlots) {
-        let candidates: any[] = [];
-
-        if (slot === 'action') {
-            candidates = await fetchItems(questActions, actionsToCategories, actionsToCategories.actionId, slot);
-        } else if (slot === 'place') {
-            candidates = await fetchItems(questPlaces, placesToCategories, placesToCategories.placeId, slot);
-        } else if (slot === 'object') {
-            candidates = await fetchItems(questObjects, objectsToCategories, objectsToCategories.objectId, slot);
-        }
-
-        if (candidates.length === 0) {
-            // Fallback: try fetching all without filter? Or just warn.
-            console.warn(`No fragments found for slot ${slot} in category ${categorySlug}`);
-            // Let's try fetching ALL for this slot if filtered yielded nothing
-            if (categoryId) {
-                if (slot === 'action') candidates = await db.select().from(questActions);
-                else if (slot === 'place') candidates = await db.select().from(questPlaces);
-                else if (slot === 'object') candidates = await db.select().from(questObjects);
+        const categoryMatches = filtered.filter((template) => template.category === categorySlug);
+        if (categoryMatches.length > 0) {
+            filtered = categoryMatches;
+        } else {
+            const fallbackPool = templates.filter((template) => template.category === categorySlug);
+            if (fallbackPool.length > 0) {
+                filtered = fallbackPool;
             }
         }
-
-        if (candidates.length > 0) {
-            const picked = pickWeighted(candidates);
-            parts.push(picked.text);
-            fragmentIds.push(`${slot}-${picked.id}`);
-        } else {
-            parts.push(`[Missing ${slot}]`);
-        }
     }
 
-    const questText = parts.join(" ").trim() + ".";
-    // symbol seed
-    const symbolSeed = Buffer.from(fragmentIds.join("|")).toString('base64').slice(0, 16);
+    if (filtered.length === 0) {
+        throw new Error('No quest templates found');
+    }
+
+    const pickedTemplate = pickWeighted(filtered);
+    const symbolSeed = Buffer.from(`template-${pickedTemplate.id}`).toString('base64').slice(0, 16);
 
     return {
-        questText,
+        questText: pickedTemplate.text,
         symbolSeed,
-        difficulty,
-        category: categorySlug || 'random'
+        difficulty: pickedTemplate.difficulty as 'easy' | 'medium' | 'hard',
+        category: pickedTemplate.category || categorySlug || 'personal'
     };
 }

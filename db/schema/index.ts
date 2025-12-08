@@ -28,52 +28,16 @@ export const cards = sqliteTable("card", {
     questText: text("quest_text").notNull(),
     difficulty: text("difficulty").default("medium"),
     symbolSeed: text("symbol_seed"),
+    category: text("category"),
     ownerId: integer("owner_id").references(() => users.id),
 });
 
-export const categories = sqliteTable("category", {
-    id: integer("id").primaryKey(),
-    name: text("name").notNull(),
-    slug: text("slug").notNull().unique(),
-    // Drizzle many-to-many is usually handled via a junction table, defining it below
-});
-
-export const cardsToCategories = sqliteTable("cards_to_categories", {
-    cardId: integer("card_id").references(() => cards.id).notNull(),
-    categoryId: integer("category_id").references(() => categories.id).notNull(),
-});
-
-export const questActions = sqliteTable("quest_action", {
+export const questTemplates = sqliteTable("quest_template", {
     id: integer("id").primaryKey(),
     text: text("text").notNull(),
     weight: integer("weight").default(1),
-});
-
-export const actionsToCategories = sqliteTable("actions_to_categories", {
-    actionId: integer("action_id").references(() => questActions.id).notNull(),
-    categoryId: integer("category_id").references(() => categories.id).notNull(),
-});
-
-export const questPlaces = sqliteTable("quest_place", {
-    id: integer("id").primaryKey(),
-    text: text("text").notNull(),
-    weight: integer("weight").default(1),
-});
-
-export const placesToCategories = sqliteTable("places_to_categories", {
-    placeId: integer("place_id").references(() => questPlaces.id).notNull(),
-    categoryId: integer("category_id").references(() => categories.id).notNull(),
-});
-
-export const questObjects = sqliteTable("quest_object", {
-    id: integer("id").primaryKey(),
-    text: text("text").notNull(),
-    weight: integer("weight").default(1),
-});
-
-export const objectsToCategories = sqliteTable("objects_to_categories", {
-    objectId: integer("object_id").references(() => questObjects.id).notNull(),
-    categoryId: integer("category_id").references(() => categories.id).notNull(),
+    difficulty: text("difficulty").default("medium"),
+    category: text("category"),
 });
 
 export const comments = sqliteTable("comment", {

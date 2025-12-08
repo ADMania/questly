@@ -2,8 +2,9 @@
 
 // TODO: Настроить вёрстку под телефоны
 
-import { useState, useRef } from "react";
+import { useState, useRef, useEffect } from "react";
 import AdventureCard from "@/components/cards/AdventureCard";
+import AuthRequiredModal from "@/components/modals/AuthRequiredModal";
 import { motion } from "framer-motion";
 
 type FeedDifficulty = "easy" | "medium" | "hard";
@@ -29,6 +30,16 @@ export type FeedPost = {
     userVote?: "up" | "down" | null;
 };
 
+type PostComment = {
+    id: number | string;
+    content: string;
+    createdAt: string | null;
+    author: {
+        username: string;
+        avatarUrl: string | null;
+    };
+};
+
 interface PostCardProps {
     post: FeedPost;
     onDelete?: (id: number | string) => void;
@@ -36,24 +47,36 @@ interface PostCardProps {
 }
 
 export default function PostCard({ post, onDelete, readOnly = false }: PostCardProps) {
-    const [votes, setVotes] = useState(parseInt(String(post.votes || 0)));
+    const [votes, setVotes] = useState(() => parseInt(String(post.votes || 0)));
     const [userVote, setUserVote] = useState<"up" | "down" | null>(post.userVote || null);
     const [isVoting, setIsVoting] = useState(false);
     const isVotingRef = useRef(false);
 
     // Comments state
-    const [comments, setComments] = useState<any[]>([]);
+    const [comments, setComments] = useState<PostComment[]>([]);
     const [isLoadingComments, setIsLoadingComments] = useState(false);
     const [commentText, setCommentText] = useState("");
     const [isPostingComment, setIsPostingComment] = useState(false);
     const [showComments, setShowComments] = useState(false);
+    const [showAuthModal, setShowAuthModal] = useState(false);
+
+    useEffect(() => {
+        setVotes(parseInt(String(post.votes || 0)));
+        setUserVote(post.userVote || null);
+    }, [post.votes, post.userVote]);
 
     const handleVote = async (type: "up" | "down") => {
         if (readOnly || isVotingRef.current) return;
 
         const jwt = localStorage.getItem("jwt");
         if (!jwt) {
-            alert("Войдите, чтобы голосовать");
+            setShowAuthModal(true);
+            return;
+        }
+
+        const postId = Number(post.id);
+        if (!Number.isFinite(postId)) {
+            alert("Не удалось определить пост для голосования.");
             return;
         }
 
@@ -87,8 +110,7 @@ export default function PostCard({ post, onDelete, readOnly = false }: PostCardP
         setUserVote(newUserVote);
 
         try {
-            const voteId = post.documentId || post.id;
-            const res = await fetch(`${process.env.NEXT_PUBLIC_STRAPI_URL || ""}/api/vote/${voteId}`, {
+            const res = await fetch(`/api/posts/${postId}/vote`, {
                 method: "PUT",
                 headers: {
                     "Content-Type": "application/json",
@@ -102,9 +124,10 @@ export default function PostCard({ post, onDelete, readOnly = false }: PostCardP
             }
 
             const data = await res.json();
-            if (data.votes !== undefined) {
-                setVotes(parseInt(data.votes));
+            if (typeof data.votes === "number") {
+                setVotes(data.votes);
             }
+            setUserVote(data.userVote === "up" || data.userVote === "down" ? data.userVote : null);
         } catch (error) {
             console.error("Vote error:", error);
             setVotes(previousVotes);
@@ -116,17 +139,21 @@ export default function PostCard({ post, onDelete, readOnly = false }: PostCardP
     };
 
     const fetchComments = async () => {
+        const postId = Number(post.id);
+        if (!Number.isFinite(postId)) {
+            return;
+        }
         setIsLoadingComments(true);
         try {
-            // Use documentId if available, otherwise fallback to id
-            const identifier = post.documentId || post.id;
-            const url = `${process.env.NEXT_PUBLIC_STRAPI_URL || ""}/api/comments/post/${identifier}`;
-            const response = await fetch(url);
+            const response = await fetch(`/api/posts/${postId}/comments`);
+            if (!response.ok) {
+                throw new Error("Failed to load comments");
+            }
             const data = await response.json();
-            console.log("[PostCard] Comments data:", data);
-            if (data.data) {
-                console.log("[PostCard] First comment:", data.data[0]);
+            if (Array.isArray(data?.data)) {
                 setComments(data.data);
+            } else {
+                setComments([]);
             }
         } catch (error) {
             console.error("Failed to fetch comments:", error);
@@ -146,25 +173,29 @@ export default function PostCard({ post, onDelete, readOnly = false }: PostCardP
         e.preventDefault();
         if (!commentText.trim()) return;
 
+        const postId = Number(post.id);
+        if (!Number.isFinite(postId)) {
+            alert("Не удалось определить пост.");
+            return;
+        }
+
+        const token = localStorage.getItem("jwt");
+        if (!token) {
+            setShowAuthModal(true);
+            return;
+        }
+
         setIsPostingComment(true);
         try {
-            const token = localStorage.getItem("jwt");
-            if (!token) {
-                alert("Пожалуйста, войдите, чтобы оставить комментарий.");
-                return;
-            }
 
-            const response = await fetch(`${process.env.NEXT_PUBLIC_STRAPI_URL || ""}/api/comments`, {
+            const response = await fetch(`/api/posts/${postId}/comments`, {
                 method: "POST",
                 headers: {
                     "Content-Type": "application/json",
                     Authorization: `Bearer ${token}`,
                 },
                 body: JSON.stringify({
-                    data: {
-                        content: commentText,
-                        post: post.id,
-                    },
+                    content: commentText.trim(),
                 }),
             });
 
@@ -172,10 +203,12 @@ export default function PostCard({ post, onDelete, readOnly = false }: PostCardP
                 throw new Error("Failed to post comment");
             }
 
-            const newComment = await response.json();
-
-            // Refresh comments
-            fetchComments();
+            const payload = await response.json();
+            if (payload?.data) {
+                setComments((prev) => [payload.data, ...prev]);
+            } else {
+                fetchComments();
+            }
             setCommentText("");
         } catch (error) {
             console.error("Error posting comment:", error);
@@ -342,9 +375,9 @@ export default function PostCard({ post, onDelete, readOnly = false }: PostCardP
 
                                             <div className="flex items-center gap-2 mb-2">
                                                 <div className="w-6 h-6 rounded-full border border-[#d2a06f] bg-[#f2e3bf] overflow-hidden flex-shrink-0">
-                                                    {comment.author?.avatar?.url ? (
+                                                    {comment.author?.avatarUrl ? (
                                                         <img
-                                                            src={`${process.env.NEXT_PUBLIC_STRAPI_URL || ""}${comment.author.avatar.url}`}
+                                                            src={comment.author.avatarUrl}
                                                             alt={comment.author.username}
                                                             className="w-full h-full object-cover"
                                                         />
@@ -380,6 +413,7 @@ export default function PostCard({ post, onDelete, readOnly = false }: PostCardP
                     )}
                 </div>
             </div>
+            {showAuthModal && <AuthRequiredModal onClose={() => setShowAuthModal(false)} />}
         </article>
     );
 }

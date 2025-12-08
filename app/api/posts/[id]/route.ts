@@ -1,17 +1,18 @@
 import { NextResponse } from "next/server";
 import { eq } from "drizzle-orm";
 import { db } from "@/lib/db";
-import { posts } from "@/db/schema";
+import { posts, votes, comments } from "@/db/schema";
 import { getUserFromRequest, unauthorized } from "@/lib/auth-guard";
 
-export async function DELETE(request: Request, { params }: { params: { id: string } }) {
+export async function DELETE(request: Request, { params }: { params: Promise<{ id: string }> }) {
   try {
     const user = await getUserFromRequest(request);
     if (!user) {
       return unauthorized();
     }
 
-    const postId = Number(params.id);
+    const { id } = await params;
+    const postId = Number(id);
     if (!Number.isFinite(postId)) {
       return NextResponse.json(
         { error: { message: "Некорректный идентификатор поста." } },
@@ -42,6 +43,8 @@ export async function DELETE(request: Request, { params }: { params: { id: strin
       );
     }
 
+    await db.delete(comments).where(eq(comments.postId, postId));
+    await db.delete(votes).where(eq(votes.postId, postId));
     await db.delete(posts).where(eq(posts.id, postId));
     return NextResponse.json({ success: true }, { status: 200 });
   } catch (error) {

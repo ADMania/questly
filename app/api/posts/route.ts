@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { and, desc, eq, inArray } from "drizzle-orm";
 import { db } from "@/lib/db";
-import { posts, cards, users, cardsToCategories, categories } from "@/db/schema";
+import { posts, cards, users, votes } from "@/db/schema";
 import { getUserFromRequest, unauthorized } from "@/lib/auth-guard";
 import { getCategoryLabel } from "@/lib/categories";
 
@@ -13,6 +13,45 @@ const getIsoDate = (value: Date | number | string | null | undefined) => {
   const date = value instanceof Date ? value : new Date(value);
   return Number.isNaN(date.getTime()) ? null : date.toISOString();
 };
+
+async function fetchVotesSummary(postIds: number[], viewerId?: number) {
+  if (postIds.length === 0) {
+    return {
+      totals: new Map<number, number>(),
+      userVotes: new Map<number, "up" | "down" | null>(),
+    };
+  }
+
+  const rows = await db
+    .select({
+      postId: votes.postId,
+      userId: votes.userId,
+      value: votes.value,
+    })
+    .from(votes)
+    .where(inArray(votes.postId, postIds));
+
+  const totals = new Map<number, number>();
+  const userVotes = new Map<number, "up" | "down" | null>();
+
+  rows.forEach((row) => {
+    if (!row.postId) return;
+    const value = Number(row.value) || 0;
+    totals.set(row.postId, (totals.get(row.postId) ?? 0) + value);
+
+    if (viewerId && row.userId === viewerId) {
+      if (value > 0) {
+        userVotes.set(row.postId, "up");
+      } else if (value < 0) {
+        userVotes.set(row.postId, "down");
+      } else {
+        userVotes.set(row.postId, null);
+      }
+    }
+  });
+
+  return { totals, userVotes };
+}
 
 const buildPostResponse = (
   row: {
@@ -33,8 +72,11 @@ const buildPostResponse = (
       questText: string | null;
       difficulty: string | null;
       symbolSeed: string | null;
+      category?: string | null;
     } | null;
     categories: { slug: string | null; name: string | null }[];
+    votes?: number;
+    userVote?: "up" | "down" | null;
   },
 ) => ({
   id: row.post.id,
@@ -47,6 +89,8 @@ const buildPostResponse = (
     username: row.author?.username || "Путешественник",
     avatarUrl: row.author?.avatarUrl || null,
   },
+  votes: row.votes ?? 0,
+  userVote: row.userVote ?? null,
   card: row.card
     ? {
       id: row.card.id,
@@ -58,47 +102,18 @@ const buildPostResponse = (
     : null,
 });
 
-async function fetchCategoriesForCards(cardIds: number[]) {
-  if (cardIds.length === 0) return new Map<number, { slug: string | null; name: string | null }[]>();
-
-  const rows = await db
-    .select({
-      cardId: cardsToCategories.cardId,
-      slug: categories.slug,
-      name: categories.name,
-    })
-    .from(cardsToCategories)
-    .innerJoin(categories, eq(cardsToCategories.categoryId, categories.id))
-    .where(inArray(cardsToCategories.cardId, cardIds));
-
-  const map = new Map<number, { slug: string | null; name: string | null }[]>();
-  rows.forEach((row) => {
-    if (!row.cardId) return;
-    const list = map.get(row.cardId) ?? [];
-    const slug = row.slug;
-    const name = row.name || (slug ? getCategoryLabel(slug) : null);
-    list.push({ slug, name });
-    map.set(row.cardId, list);
-  });
-  return map;
-}
-
 export async function GET(request: Request) {
   try {
     const { searchParams } = new URL(request.url);
     const scope = searchParams.get("scope");
     const authorParam = searchParams.get("authorId");
+    const viewer = await getUserFromRequest(request).catch(() => null);
 
-    let viewer = null;
+    const filters: any[] = [];
     if (scope === "mine") {
-      viewer = await getUserFromRequest(request);
       if (!viewer) {
         return unauthorized();
       }
-    }
-
-    const filters: any[] = [];
-    if (viewer) {
       filters.push(eq(posts.authorId, viewer.id));
     } else if (authorParam) {
       const authorId = Number(authorParam);
@@ -128,6 +143,7 @@ export async function GET(request: Request) {
           questText: cards.questText,
           difficulty: cards.difficulty,
           symbolSeed: cards.symbolSeed,
+          category: cards.category,
         },
       })
       .from(posts)
@@ -142,17 +158,23 @@ export async function GET(request: Request) {
 
     const rows = await query.orderBy(desc(posts.createdAt));
 
-    const cardIds = rows
-      .map((row) => row.card?.id)
+    const postIds = rows
+      .map((row) => row.post.id)
       .filter((id): id is number => typeof id === "number");
-    const categoriesMap = await fetchCategoriesForCards(cardIds);
 
-    const data = rows.map((row) =>
-      buildPostResponse({
+    const votesSummary = await fetchVotesSummary(postIds, viewer?.id ?? undefined);
+
+    const data = rows.map((row) => {
+      const postId = row.post.id ?? -1;
+      return buildPostResponse({
         ...row,
-        categories: row.card?.id ? categoriesMap.get(row.card.id) ?? [] : [],
-      }),
-    );
+        categories: row.card?.category
+          ? [{ slug: row.card.category, name: getCategoryLabel(row.card.category) }]
+          : [],
+        votes: postId >= 0 ? votesSummary.totals.get(postId) ?? 0 : 0,
+        userVote: viewer ? votesSummary.userVotes.get(postId) ?? null : null,
+      });
+    });
 
     return NextResponse.json({ data }, { status: 200 });
   } catch (error) {
@@ -192,6 +214,7 @@ export async function POST(request: Request) {
         questText: cards.questText,
         difficulty: cards.difficulty,
         symbolSeed: cards.symbolSeed,
+        category: cards.category,
       })
       .from(cards)
       .where(eq(cards.id, cardId))
@@ -246,8 +269,9 @@ export async function POST(request: Request) {
       throw new Error("Failed to insert post");
     }
 
-    const categoriesMap = await fetchCategoriesForCards(card.id ? [card.id] : []);
-    const categories = card.id ? categoriesMap.get(card.id) ?? [] : [];
+    const categories = card.category
+      ? [{ slug: card.category, name: getCategoryLabel(card.category) }]
+      : [];
 
     const payload = buildPostResponse({
       post: newPost,
@@ -257,6 +281,7 @@ export async function POST(request: Request) {
         questText: card.questText,
         difficulty: card.difficulty,
         symbolSeed: card.symbolSeed,
+        category: card.category,
       },
       categories,
     });
