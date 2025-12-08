@@ -61,6 +61,7 @@
    docker compose up --build web
    ```
    Next.js будет доступен по адресу [http://localhost:3000](http://localhost:3000).
+   Во время старта контейнера автоматически выполняется `npx drizzle-kit push`. Если миграции не нужны (например, в CI), установите `SKIP_DRIZZLE_MIGRATIONS=1` для сервиса `web`.
 
 > ⚙️ В production схеме рекомендуется запускать `npm run db:push` в CI/CD перед деплоем контейнера, чтобы структура БД всегда была синхронизирована.
 
