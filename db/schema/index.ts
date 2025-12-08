@@ -29,7 +29,7 @@ const sqliteCards = sqliteTable("card", {
   id: sqliteInteger("id").primaryKey(),
   slug: sqliteText("slug").notNull().unique(),
   questText: sqliteText("quest_text").notNull(),
-  difficulty: sqliteText("difficulty").default("medium"),
+  difficulty: sqliteText("difficulty").notNull().default("medium"),
   symbolSeed: sqliteText("symbol_seed"),
   category: sqliteText("category"),
   ownerId: sqliteInteger("owner_id").references(() => sqliteUsers.id),
@@ -39,7 +39,7 @@ const sqlitePosts = sqliteTable("post", {
   id: sqliteInteger("id").primaryKey(),
   title: sqliteText("title").notNull(),
   content: sqliteText("content").notNull(),
-  isPublic: sqliteInteger("is_public", { mode: "boolean" }).default(true),
+  isPublic: sqliteInteger("is_public", { mode: "boolean" }).notNull().default(true),
   createdAt: sqliteInteger("created_at", { mode: "timestamp" }).default(sql`CURRENT_TIMESTAMP`),
   updatedAt: sqliteInteger("updated_at", { mode: "timestamp" }).default(sql`CURRENT_TIMESTAMP`),
   authorId: sqliteInteger("author_id").references(() => sqliteUsers.id).notNull(),
@@ -49,8 +49,8 @@ const sqlitePosts = sqliteTable("post", {
 const sqliteQuestTemplates = sqliteTable("quest_template", {
   id: sqliteInteger("id").primaryKey(),
   text: sqliteText("text").notNull(),
-  weight: sqliteInteger("weight").default(1),
-  difficulty: sqliteText("difficulty").default("medium"),
+  weight: sqliteInteger("weight").notNull().default(1),
+  difficulty: sqliteText("difficulty").notNull().default("medium"),
   category: sqliteText("category"),
 });
 
@@ -67,7 +67,7 @@ const sqliteVotes = sqliteTable("vote", {
   id: sqliteInteger("id").primaryKey(),
   userId: sqliteInteger("user_id").references(() => sqliteUsers.id).notNull(),
   postId: sqliteInteger("post_id").references(() => sqlitePosts.id).notNull(),
-  value: sqliteInteger("value").default(1),
+  value: sqliteInteger("value").notNull().default(1),
 });
 
 const sqliteFeedbacks = sqliteTable("feedback", {
@@ -75,14 +75,14 @@ const sqliteFeedbacks = sqliteTable("feedback", {
   message: sqliteText("message").notNull(),
   type: sqliteText("type").default("bug"),
   pageContext: sqliteText("page_context"),
-  status: sqliteText("status").default("new"),
+  status: sqliteText("status").notNull().default("new"),
   userId: sqliteInteger("user_id").references(() => sqliteUsers.id),
   userEmail: sqliteText("user_email"),
   userName: sqliteText("user_name"),
   createdAt: sqliteInteger("created_at", { mode: "timestamp" }).default(sql`CURRENT_TIMESTAMP`),
 });
 
-const sqliteSchema = {
+export const sqliteSchema = {
   users: sqliteUsers,
   cards: sqliteCards,
   posts: sqlitePosts,
@@ -116,7 +116,7 @@ const pgCards = pgTable(
     id: serial("id").primaryKey(),
     slug: text("slug").notNull(),
     questText: text("quest_text").notNull(),
-    difficulty: text("difficulty").default("medium"),
+    difficulty: text("difficulty").notNull().default("medium"),
     symbolSeed: text("symbol_seed"),
     category: text("category"),
     ownerId: integer("owner_id")
@@ -146,8 +146,8 @@ const pgPosts = pgTable("posts", {
 const pgQuestTemplates = pgTable("quest_templates", {
   id: serial("id").primaryKey(),
   text: text("text").notNull(),
-  weight: integer("weight").default(1),
-  difficulty: text("difficulty").default("medium"),
+  weight: integer("weight").notNull().default(1),
+  difficulty: text("difficulty").notNull().default("medium"),
   category: text("category"),
 });
 
@@ -174,7 +174,7 @@ const pgVotes = pgTable(
     postId: integer("post_id")
       .references(() => pgPosts.id, { onDelete: "cascade" })
       .notNull(),
-    value: integer("value").default(1),
+    value: integer("value").notNull().default(1),
   },
   (table) => ({
     userPostUnique: uniqueIndex("votes_user_post_unique").on(
@@ -189,7 +189,7 @@ const pgFeedbacks = pgTable("feedbacks", {
   message: text("message").notNull(),
   type: text("type").default("bug"),
   pageContext: text("page_context"),
-  status: text("status").default("new"),
+  status: text("status").notNull().default("new"),
   userId: integer("user_id").references(() => pgUsers.id, {
     onDelete: "set null",
   }),
@@ -198,7 +198,7 @@ const pgFeedbacks = pgTable("feedbacks", {
   createdAt: timestamp("created_at", { withTimezone: true }).defaultNow(),
 });
 
-const pgSchema = {
+export const pgSchema = {
   users: pgUsers,
   cards: pgCards,
   posts: pgPosts,
@@ -215,14 +215,14 @@ const usePostgres =
   process.env.DATABASE_URL?.startsWith("postgres") ||
   (process.env.NODE_ENV === "production" && Boolean(process.env.POSTGRES_URL));
 
-const schema = (usePostgres ? pgSchema : sqliteSchema) as typeof sqliteSchema & typeof pgSchema;
-
-export const users = schema.users;
-export const cards = schema.cards;
-export const posts = schema.posts;
-export const questTemplates = schema.questTemplates;
-export const comments = schema.comments;
-export const votes = schema.votes;
-export const feedbacks = schema.feedbacks;
+export const users = (usePostgres ? pgUsers : sqliteUsers) as typeof sqliteUsers;
+export const cards = (usePostgres ? pgCards : sqliteCards) as typeof sqliteCards;
+export const posts = (usePostgres ? pgPosts : sqlitePosts) as typeof sqlitePosts;
+export const questTemplates = (usePostgres
+  ? pgQuestTemplates
+  : sqliteQuestTemplates) as typeof sqliteQuestTemplates;
+export const comments = (usePostgres ? pgComments : sqliteComments) as typeof sqliteComments;
+export const votes = (usePostgres ? pgVotes : sqliteVotes) as typeof sqliteVotes;
+export const feedbacks = (usePostgres ? pgFeedbacks : sqliteFeedbacks) as typeof sqliteFeedbacks;
 
 export const schemaDialect = usePostgres ? "postgres" : "sqlite";

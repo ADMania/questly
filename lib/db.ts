@@ -1,17 +1,16 @@
-import { drizzle as drizzleSqlite } from "drizzle-orm/better-sqlite3";
-import { drizzle as drizzlePostgres } from "drizzle-orm/postgres-js";
-import type { BetterSQLite3Database } from "drizzle-orm/better-sqlite3";
-import type { PostgresJsDatabase } from "drizzle-orm/postgres-js";
 import Database from "better-sqlite3";
 import postgres from "postgres";
-import { schemaDialect } from "@/db/schema";
+import { drizzle as drizzleSqlite } from "drizzle-orm/better-sqlite3";
+import { drizzle as drizzlePostgres } from "drizzle-orm/postgres-js";
+import type { DrizzleD1Database } from "drizzle-orm/d1";
+import { pgSchema, schemaDialect, sqliteSchema } from "@/db/schema";
 
-type DatabaseInstance = BetterSQLite3Database | PostgresJsDatabase;
+const globalForDb = globalThis as { db?: DrizzleD1Database };
 
-const globalForDb = globalThis as { db?: DatabaseInstance };
+function createDatabase(): DrizzleD1Database {
+  const usePostgres = schemaDialect === "postgres";
 
-if (!globalForDb.db) {
-  if (schemaDialect === "postgres") {
+  if (usePostgres) {
     const connection =
       process.env.POSTGRES_URL ??
       (process.env.DATABASE_URL?.startsWith("postgres")
@@ -26,12 +25,16 @@ if (!globalForDb.db) {
       max: process.env.NODE_ENV === "production" ? 3 : 1,
       idle_timeout: 20,
     });
-    globalForDb.db = drizzlePostgres(client);
-  } else {
-    const sqliteFile = process.env.DATABASE_URL?.replace("file:", "") || "dev.db";
-    const sqlite = new Database(sqliteFile);
-    globalForDb.db = drizzleSqlite(sqlite);
+    return drizzlePostgres(client, { schema: pgSchema }) as unknown as DrizzleD1Database;
   }
+
+  const sqliteFile = process.env.DATABASE_URL?.replace("file:", "") || "dev.db";
+  const sqlite = new Database(sqliteFile);
+  return drizzleSqlite(sqlite, { schema: sqliteSchema }) as unknown as DrizzleD1Database;
 }
 
-export const db = globalForDb.db;
+export const db = globalForDb.db ?? createDatabase();
+
+if (!globalForDb.db) {
+  globalForDb.db = db;
+}
