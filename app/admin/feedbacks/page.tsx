@@ -47,7 +47,7 @@ export default async function AdminFeedbacksPage() {
                     <span
                       className={`inline-flex items-center rounded-full border-2 px-3 py-1 ${statusStyles[item.status] ?? "border-[#d2a06f] text-[#5e4632]"}`}
                     >
-                      {typeLabels[item.type] ?? item.type}
+                      {item.type ? typeLabels[item.type] ?? item.type : "Неизвестно"}
                     </span>
                     {item.pageContext && (
                       <span className="rounded-full border px-3 py-1 text-xs text-[#5e4632] bg-white">
