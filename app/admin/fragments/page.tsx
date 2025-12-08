@@ -39,7 +39,7 @@ export default async function AdminFragmentsPage() {
                                     </span>
                                 </td>
                                 <td className="p-4 text-sm text-[#5e4632]">
-                                    {frag.categoryLabel || 'Без категории'}
+                                    {frag.categoryLabel}
                                 </td>
                                 <td className="p-4 text-[#8c6b54]">{frag.weight}</td>
                                 <td className="p-4">

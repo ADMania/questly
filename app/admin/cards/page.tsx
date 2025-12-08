@@ -50,7 +50,7 @@ export default async function AdminCardsPage() {
                                         </span>
                                     </td>
                                     <td className="p-4 text-sm text-[#5e4632]">
-                                        {card.categoryLabel || 'Без категории'}
+                                        {card.categoryLabel}
                                     </td>
                                     <td className="p-4">
                                         <DeleteCardButton id={card.id} />

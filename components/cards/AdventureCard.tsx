@@ -109,7 +109,7 @@ export default function AdventureCard({ quest, isClosing }: AdventureCardProps) 
                     ))}
                   </div>
 
-                  <div className="flex h-full flex-col px-2 pb-12 gap-4">
+                  <div className="flex h-full flex-col px-2 gap-4">
                     {/* Символ */}
                     <div className="flex flex-1 items-center justify-center overflow-hidden">
                       <SymbolGenerator

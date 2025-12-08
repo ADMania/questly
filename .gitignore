@@ -16,6 +16,7 @@ next-env.d.ts
 
 # Production
 /dist
+/uploads
 
 # Environment Variables
 .env

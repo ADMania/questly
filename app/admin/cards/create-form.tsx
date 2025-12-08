@@ -6,6 +6,7 @@ import { CATEGORY_LABELS } from '@/lib/categories';
 import { useRef, useState, useEffect } from 'react';
 
 const categoryOptions = Object.entries(CATEGORY_LABELS);
+const defaultCategory = categoryOptions[0]?.[0] ?? '';
 
 export default function CardCreateForm() {
     const formRef = useRef<HTMLFormElement>(null);
@@ -13,7 +14,7 @@ export default function CardCreateForm() {
     const [questText, setQuestText] = useState('');
     const [slug, setSlug] = useState('');
     const [symbolSeed, setSymbolSeed] = useState('');
-    const [category, setCategory] = useState('');
+    const [category, setCategory] = useState(defaultCategory);
 
     // Auto-slug
     useEffect(() => {
@@ -38,7 +39,7 @@ export default function CardCreateForm() {
             setQuestText('');
             setSlug('');
             setSymbolSeed('');
-            setCategory('');
+            setCategory(defaultCategory);
         } else if (result?.error) {
             alert(result.error);
         }
@@ -129,9 +130,9 @@ export default function CardCreateForm() {
                         name="category"
                         value={category}
                         onChange={(event) => setCategory(event.target.value)}
+                        required
                         className="w-full px-4 py-3 rounded-xl border-2 border-[#d2a06f] bg-white focus:bg-[#fffcf5] outline-none transition text-[#3c2415]"
                     >
-                        <option value="">Без категории</option>
                         {categoryOptions.map(([slug, label]) => (
                             <option key={slug} value={slug}>{label}</option>
                         ))}

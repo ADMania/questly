@@ -1,5 +1,6 @@
 'use server';
 
+import { randomUUID } from 'crypto';
 import { db } from '@/lib/db';
 import { questTemplates } from '@/db/schema';
 
@@ -10,19 +11,25 @@ type GenerateOptions = {
 
 function pickWeighted<T extends { weight: number | null }>(items: T[]): T {
     if (items.length === 0) throw new Error("Empty list");
-    const weightedItems = items.map(i => ({ ...i, weight: i.weight || 1 }));
+    const weightedItems = items.map((item) => {
+        const rawWeight = Number(item.weight) || 1;
+        const inverted = rawWeight <= 0 ? 1 : 1 / rawWeight;
+        return { ...item, normalizedWeight: inverted };
+    });
 
-    const total = weightedItems.reduce((sum, item) => sum + item.weight, 0);
+    const total = weightedItems.reduce((sum, item) => sum + item.normalizedWeight, 0);
     let threshold = Math.random() * total;
 
     for (const item of weightedItems) {
-        threshold -= item.weight;
+        threshold -= item.normalizedWeight;
         if (threshold <= 0) return item;
     }
     return weightedItems[weightedItems.length - 1];
 }
 
 const DIFFICULTY_VALUES: Array<'easy' | 'medium' | 'hard'> = ['easy', 'medium', 'hard'];
+
+const generateSymbolSeed = () => randomUUID().replace(/-/g, '').slice(0, 16);
 
 export async function generateQuestAction(options: GenerateOptions) {
     const { categorySlug } = options;
@@ -56,7 +63,7 @@ export async function generateQuestAction(options: GenerateOptions) {
     }
 
     const pickedTemplate = pickWeighted(filtered);
-    const symbolSeed = Buffer.from(`template-${pickedTemplate.id}`).toString('base64').slice(0, 16);
+    const symbolSeed = generateSymbolSeed();
 
     return {
         questText: pickedTemplate.text,

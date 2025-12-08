@@ -62,9 +62,10 @@ export default function FragmentCreateForm() {
                     <label className="block text-sm font-bold text-[#5e4632] mb-2">Категория</label>
                     <select
                         name="category"
+                        defaultValue={categoryOptions[0]?.[0]}
+                        required
                         className="w-full px-4 py-3 rounded-xl border-2 border-[#d2a06f] bg-white focus:bg-[#fffcf5] outline-none transition text-[#3c2415]"
                     >
-                        <option value="">Без категории</option>
                         {categoryOptions.map(([slug, label]) => (
                             <option key={slug} value={slug}>{label}</option>
                         ))}
