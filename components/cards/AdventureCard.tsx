@@ -109,13 +109,18 @@ export default function AdventureCard({ quest, isClosing }: AdventureCardProps) 
                     ))}
                   </div>
 
-                  <div className="flex h-full flex-col px-2 pb-24">
+                  <div className="flex h-full flex-col px-2 pb-12 gap-4">
                     {/* Символ */}
-                    <div className="flex flex-1 items-center justify-center">
+                    <div className="flex flex-1 items-center justify-center overflow-hidden">
                       <SymbolGenerator
-                        size={420}
+                        size={360}
                         seed={quest.symbolSeed}
-                        style={{ width: 420, maxWidth: "100%", height: "auto" }}
+                        style={{
+                          width: "100%",
+                          maxWidth: 320,
+                          maxHeight: 240,
+                          height: "auto",
+                        }}
                       />
                     </div>
 
@@ -126,10 +131,18 @@ export default function AdventureCard({ quest, isClosing }: AdventureCardProps) 
                         borderTop: "1px solid rgba(210,160,111,0.35)",
                       }}
                     >
-                      <div className="mb-1 text-sm font-semibold text-[#5e4632] opacity-90">
+                      <div className="mb-1 text-sm font-semibold text-[#5e4632] opacity-90 truncate">
                         {categoryLabel}
                       </div>
-                      <h3 className="text-[18px] font-bold text-[#3c2415] leading-snug tracking-tight">
+                      <h3
+                        className="text-[18px] font-bold text-[#3c2415] leading-snug tracking-tight"
+                        style={{
+                          display: "-webkit-box",
+                          WebkitLineClamp: 4,
+                          WebkitBoxOrient: "vertical",
+                          overflow: "hidden",
+                        }}
+                      >
                         {quest.quest}
                       </h3>
                     </div>
