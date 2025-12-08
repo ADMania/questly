@@ -46,11 +46,7 @@ export default function Home() {
       setShowAuthPrompt(false);
 
       const result = await generateQuestAction({
-        categorySlug: category,
-        difficulty: 'medium' // Default to medium or make random logic here too? Legacy had random logic inside server?
-        // My server action has random logic for difficulty if not passed? 
-        // No, it defaults to 'medium' in destructuring.
-        // Let's randomize it here to get variety.
+        categorySlug: category
       });
 
       // Mimic legacy structure

@@ -11,10 +11,21 @@ type GenerateOptions = {
 
 function pickWeighted<T extends { weight: number | null }>(items: T[]): T {
   if (items.length === 0) throw new Error("Empty list");
-  const weightedItems = items.map((item) => {
-    const rawWeight = Number(item.weight) || 1;
-    const inverted = rawWeight <= 0 ? 1 : 1 / rawWeight;
-    return { ...item, normalizedWeight: inverted };
+
+  const safeWeights = items.map((item) => {
+    const parsed = Number(item.weight);
+    return Number.isFinite(parsed) && parsed > 0 ? parsed : 1;
+  });
+  const inverted = safeWeights.map((weight) => 1 / (weight + 1));
+  const minNormalized =
+    inverted.reduce((min, current) => Math.min(min, current), inverted[0]) || 1;
+
+  const weightedItems = items.map((item, index) => {
+    const normalizedWeight = Math.max(
+      1,
+      Math.round(inverted[index] / minNormalized),
+    );
+    return { item, normalizedWeight };
   });
 
   const total = weightedItems.reduce(
@@ -23,11 +34,11 @@ function pickWeighted<T extends { weight: number | null }>(items: T[]): T {
   );
   let threshold = Math.random() * total;
 
-  for (const item of weightedItems) {
-    threshold -= item.normalizedWeight;
-    if (threshold <= 0) return item;
+  for (const entry of weightedItems) {
+    threshold -= entry.normalizedWeight;
+    if (threshold <= 0) return entry.item;
   }
-  return weightedItems[weightedItems.length - 1];
+  return weightedItems[weightedItems.length - 1].item;
 }
 
 const DIFFICULTY_VALUES: Array<"easy" | "medium" | "hard"> = [
