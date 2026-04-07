@@ -7,6 +7,6 @@ export default function robots(): MetadataRoute.Robots {
             allow: '/',
             disallow: ['/api/', '/cms/'],
         },
-        sitemap: 'https://questly.site/sitemap.xml',
+        sitemap: 'https://quest.cdmerch.ru/sitemap.xml',
     };
 }
