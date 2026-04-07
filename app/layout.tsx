@@ -9,16 +9,16 @@ export const metadata: Metadata = {
   description:
     "Questly — онлайн генератор случайных заданий и квестов. Креативные, ночные, дневные, социальные и домашние приключения для вдохновения и развлечений.",
   applicationName: "Questly",
-  authors: [{ name: "Infera", url: "https://questly.site" }],
+  authors: [{ name: "CDMerch", url: "https://quest.cdmerch.ru" }],
   keywords: [
     "квесты", "задания", "челленджи", "приключения", "игра", "развлечения",
     "генератор квестов", "генератор заданий", "random quest", "случайные задания"
   ],
-  metadataBase: new URL("https://questly.site"),
+  metadataBase: new URL("https://quest.cdmerch.ru"),
   openGraph: {
     title: "Questly — Твоя коллекция приключений",
     description: "Генератор случайных квестов и заданий. Выходи из рутины и коллекционируй впечатления!",
-    url: "https://questly.site",
+    url: "https://quest.cdmerch.ru",
     siteName: "Questly",
     locale: "ru_RU",
     type: "website",
@@ -110,12 +110,12 @@ export default function RootLayout({
         <footer
           className="text-center text-sm py-4 mt-10 text-[#5e4632] bg-[#fff9eb]/60 border-t border-[#d2a06f]/30"
         >
-          © 2025 Infera |{" "}
+          © 2026 CDMerch |{" "}
           <a
             href="mailto:infera-sys@yandex.ru"
             className="underline-offset-2 hover:underline"
           >
-            infera-sys@yandex.ru
+            admin@cdmerch.ru
           </a>
           <div className="mt-2 space-x-4">
             <Link href="/privacy" className="underline-offset-2 hover:underline">
